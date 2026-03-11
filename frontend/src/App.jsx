@@ -16,6 +16,12 @@ import Checkout from "./pages/Checkout";
 import VerifyEmail from "./pages/VerifyEmail";
 import NotFound from "./pages/NotFound";
 
+// Policy Pages
+import ShippingPolicy from "./pages/policies/ShippingPolicy";
+import ReturnsExchange from "./pages/policies/ReturnsExchange";
+import PrivacyPolicy from "./pages/policies/PrivacyPolicy";
+import TermsConditions from "./pages/policies/TermsConditions";
+
 // Admin
 import AdminLayout from "./admin/AdminLayout";
 import AdminDashboard from "./admin/AdminDashboard";
@@ -92,6 +98,10 @@ const App = () => (
         <Route path="/about"        element={<About />} />
         <Route path="/contact"      element={<Contact />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/shipping-policy"   element={<ShippingPolicy />} />
+        <Route path="/returns-exchanges"  element={<ReturnsExchange />} />
+        <Route path="/privacy-policy"     element={<PrivacyPolicy />} />
+        <Route path="/terms-conditions"   element={<TermsConditions />} />
         <Route path="*"             element={<NotFound />} />
       </Route>
 

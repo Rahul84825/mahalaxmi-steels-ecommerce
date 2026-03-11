@@ -51,17 +51,17 @@ const TIMELINE = [
   {
     year: "2022",
     title: "The Beginning",
-    desc: "Mahalaxmi Steels opened its doors in Pimpri-Chinchwad with a small but carefully curated collection of stainless steel and copper utensils.",
+    desc: "Sakharam Choudhary founded Mahalaxmi Steels and Home Appliance in Akurdi, Pune with a carefully curated collection of stainless steel utensils and kitchen essentials.",
   },
   {
     year: "2023",
     title: "Growing Family",
-    desc: "Within our first year, over 200 families trusted us for their kitchen needs. We expanded our collection to include Pital (Brass) items and Pooja Essentials.",
+    desc: "Within our first year, over 200 families in Akurdi and Pimpri-Chinchwad trusted us for their kitchen needs. We expanded to include Pital (Brass) items, Pooja Essentials, and home appliances.",
   },
   {
     year: "2024",
     title: "500+ Happy Homes",
-    desc: "Today we proudly serve 500+ happy customers and have grown our product range to include modern home appliances alongside our traditional offerings.",
+    desc: "Today we proudly serve 500+ happy customers across Pimpri-Chinchwad and have grown our product range to include modern home appliances alongside our traditional offerings.",
   },
 ];
 
@@ -86,9 +86,9 @@ const About = () => {
               <span className="text-blue-300">Trust & Quality</span>
             </h1>
             <p className="text-blue-100/90 text-sm sm:text-base leading-relaxed mb-8 max-w-lg">
-              From a small shop in Pimpri-Chinchwad to 500+ happy homes —
-              Mahalaxmi Steels is more than a store. It's a promise to every
-              family we serve.
+              From a local shop in Akurdi, Pune to 500+ happy homes —
+              Mahalaxmi Steels and Home Appliance is more than a store. It's a promise by Sakharam Choudhary to every
+              family we serve in the Pimpri-Chinchwad community.
             </p>
             <NavLink
               to="/products"
@@ -135,23 +135,23 @@ const About = () => {
               </h2>
               <div className="space-y-4 text-slate-600 text-sm leading-relaxed">
                 <p>
-                  Mahalaxmi Steels was started with a simple dream — to bring
-                  premium quality kitchen utensils, traditional copper & brass
-                  items, and reliable home appliances to the families of
-                  Pimpri-Chinchwad at honest, fair prices.
+                  Mahalaxmi Steels and Home Appliance was started by <strong className="text-slate-900">Sakharam Choudhary</strong> with a simple dream — to bring
+                  premium quality stainless steel utensils, kitchen essentials, cookware,
+                  and reliable home appliances to the families of
+                  Akurdi and Pimpri-Chinchwad at honest, affordable prices.
                 </p>
                 <p>
-                  We started small, but our commitment to quality and our
+                  Located at <strong className="text-slate-900">Ekta Nagar, Akurdi Gaothan, Dattawadi, Akurdi, Pune</strong>, we started small, but our commitment to quality and our
                   personal approach to every customer quickly earned us the
                   trust of the community. Today, over <strong className="text-slate-900">
-                  500+ families</strong> across Maharashtra rely on us for their
+                  500+ families</strong> across Pimpri-Chinchwad rely on us for their
                   kitchen and home needs.
                 </p>
                 <p>
                   Every product we stock is handpicked with care — from
-                  ISI-marked stainless steel kadais to authentic copper water
-                  jugs and beautifully crafted Pooja essentials. We take pride
-                  in knowing that our products are used in homes every single day.
+                  durable stainless steel kadais and cookware to everyday kitchen essentials
+                  and modern home appliances. We take pride
+                  in knowing that our products serve households every single day.
                 </p>
               </div>
             </div>
@@ -196,8 +196,8 @@ const About = () => {
                   <span className="text-3xl">👨‍💼</span>
                 </div>
                 <div className="text-center relative z-10">
-                  <h2 className="text-sm font-bold text-slate-900">[Owner Name]</h2>
-                  <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mt-0.5">Founder</p>
+                  <h2 className="text-sm font-bold text-slate-900">Sakharam Choudhary</h2>
+                  <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mt-0.5">Founder & Owner</p>
                 </div>
               </div>
 
@@ -210,10 +210,10 @@ const About = () => {
                 <blockquote className="text-sm text-slate-600 leading-relaxed italic relative">
                   <span className="absolute -top-2 -left-2 text-4xl text-slate-100 font-serif leading-none select-none">"</span>
                   <span className="relative z-10">
-                    I started this shop because I believe every family deserves
-                    quality products at honest prices. Our customers are not just
-                    buyers — they are part of the Mahalaxmi family. Every smile
-                    and every satisfied customer keeps me going.
+                    I started Mahalaxmi Steels and Home Appliance because I believe every family in Akurdi
+                    and Pimpri-Chinchwad deserves durable, high-quality products at affordable prices.
+                    Our customers are not just buyers — they are part of the Mahalaxmi family.
+                    Every smile and every satisfied customer keeps me going.
                   </span>
                 </blockquote>
               </div>
@@ -308,19 +308,19 @@ const About = () => {
             <div className="flex flex-col gap-3">
               {[
                 {
-                  icon: MapPin, label: "Address", value: "Main Market Road, Pimpri-Chinchwad, Maharashtra",
-                  color: "text-blue-600", bg: "bg-blue-50",
+                  icon: MapPin, label: "Address", value: "Ekta Nagar, Akurdi Gaothan, Dattawadi, Akurdi, Pune, Maharashtra 411035",
+                  color: "text-blue-600", bg: "bg-blue-50", href: "https://maps.app.goo.gl/i7VqYRV4YFvNRdTc8",
                 },
                 {
-                  icon: Phone, label: "Phone", value: "+91 98765 43210", href: "tel:+919876543210",
+                  icon: Phone, label: "Phone", value: "+91 95618 78293", href: "tel:+919561878293",
                   color: "text-emerald-600", bg: "bg-emerald-50",
                 },
                 {
-                  icon: Mail, label: "Email", value: "support@mahalaxmisteels.com", href: "mailto:support@mahalaxmisteels.com",
+                  icon: Mail, label: "Email", value: "mahalaxmisteels08@gmail.com", href: "mailto:mahalaxmisteels08@gmail.com",
                   color: "text-blue-600", bg: "bg-blue-50",
                 },
                 {
-                  icon: Clock, label: "Hours", value: "Mon – Sat: 9:00 AM – 8:00 PM",
+                  icon: Clock, label: "Hours", value: "Mon – Sun: 9:00 AM – 10:00 PM",
                   color: "text-amber-600", bg: "bg-amber-50",
                 },
               ].map(({ icon: Icon, label, value, href, color, bg }) => (
@@ -352,8 +352,8 @@ const About = () => {
                 <MapPin className="w-4 h-4" /> Map Embed Area
               </p>
               <iframe
-                title="Mahalaxmi Steels Location"
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3781.526!2d73.8567!3d18.6298!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTjCsDM3JzQ3LjMiTiA3M8KwNTEnMjQuMiJF!5e0!3m2!1sen!2sin!4v1234567890"
+                title="Mahalaxmi Steels and Home Appliance Location"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d236.26597118488425!2d73.77872675657274!3d18.65252551471866!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bc2b9e89355ae2d%3A0x423742e2b19d30e3!2sMahalaxmi%20steel%20and%20Home%20appliances!5e0!3m2!1sen!2sin!4v1773241762037!5m2!1sen!2sin"
                 width="100%"
                 height="100%"
                 className="absolute inset-0 w-full h-full z-10 opacity-50 group-hover:opacity-100 transition-opacity duration-500"

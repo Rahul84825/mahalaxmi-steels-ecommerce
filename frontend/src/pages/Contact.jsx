@@ -23,34 +23,35 @@ const CONTACT_INFO = [
   {
     icon: MapPin,
     label: "Visit Us",
-    value: "Main Market Road, Pimpri-Chinchwad, Maharashtra",
+    value: "Ekta Nagar, Akurdi Gaothan, Dattawadi, Akurdi, Pune, Pimpri-Chinchwad, Maharashtra 411035",
     sub: "Open Mon – Sat",
     color: "text-blue-600",
     bg: "bg-blue-50",
+    href: "https://maps.app.goo.gl/i7VqYRV4YFvNRdTc8",
   },
   {
     icon: PhoneCall,
     label: "Call Us",
-    value: "+91 98765 43210",
-    sub: "Mon – Sat, 9AM – 8PM",
-    href: "tel:+919876543210",
+    value: "+91 95618 78293",
+    sub: "Mon – Sun, 9AM – 10PM",
+    href: "tel:+919561878293",
     color: "text-emerald-600",
     bg: "bg-emerald-50",
   },
   {
     icon: Mail,
     label: "Email Us",
-    value: "support@mahalaxmisteels.com",
+    value: "mahalaxmisteels08@gmail.com",
     sub: "We reply within 24 hrs",
-    href: "mailto:support@mahalaxmisteels.com",
+    href: "mailto:mahalaxmisteels08@gmail.com",
     color: "text-purple-600",
     bg: "bg-purple-50",
   },
   {
     icon: Clock,
     label: "Working Hours",
-    value: "Mon – Sat: 9:00 AM – 8:00 PM",
-    sub: "Sunday: Closed",
+    value: "Mon – Sun: 9:00 AM – 10:00 PM",
+    sub: "Open EveryDay",
     color: "text-amber-600",
     bg: "bg-amber-50",
   },
@@ -180,7 +181,7 @@ const Contact = () => {
 
             {/* WhatsApp CTA */}
             <a
-              href="https://wa.me/919876543210"
+              href="https://wa.me/919561878293"
               target="_blank"
               rel="noopener noreferrer"
               className="mt-2 flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold text-sm py-4 rounded-2xl transition-all duration-300 shadow-md shadow-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/30 hover:-translate-y-0.5"
@@ -277,6 +278,36 @@ const Contact = () => {
           </div>
 
         </div>
+
+        {/* ── Google Maps Embed ── */}
+        <div className="mt-12">
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 mb-6 tracking-tight text-center">Find Us on Map</h2>
+          <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
+            <iframe
+              title="Mahalaxmi Steels and Home Appliance Location"
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d236.26597118488425!2d73.77872675657274!3d18.65252551471866!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bc2b9e89355ae2d%3A0x423742e2b19d30e3!2sMahalaxmi%20steel%20and%20Home%20appliances!5e0!3m2!1sen!2sin!4v1773241762037!5m2!1sen!2sin"
+              width="100%"
+              height="400"
+              style={{ border: 0 }}
+              allowFullScreen=""
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              className="w-full"
+            />
+          </div>
+          <div className="mt-4 text-center">
+            <a
+              href="https://maps.app.goo.gl/i7VqYRV4YFvNRdTc8"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+            >
+              <MapPin className="w-4 h-4" />
+              Open in Google Maps
+            </a>
+          </div>
+        </div>
+
       </div>
     </main>
   );

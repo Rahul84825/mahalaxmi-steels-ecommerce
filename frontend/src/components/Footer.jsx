@@ -16,35 +16,35 @@ const QUICK_LINKS = [
 ];
 
 const SUPPORT_LINKS = [
-  { label: "Shipping Policy",     to: "#" },
-  { label: "Returns & Exchanges", to: "#" },
-  { label: "FAQs",                to: "#" },
-  { label: "Terms & Conditions",  to: "#" },
-  { label: "Privacy Policy",      to: "#" },
+  { label: "Shipping Policy",     to: "/shipping-policy"   },
+  { label: "Returns & Exchanges", to: "/returns-exchanges"  },
+  { label: "Terms & Conditions",  to: "/terms-conditions"   },
+  { label: "Privacy Policy",      to: "/privacy-policy"     },
 ];
 
 const CONTACT_INFO = [
   {
     icon: MapPin,
     label: "Address",
-    value: "Main Market Road, Pimpri-Chinchwad, Maharashtra",
+    value: "Ekta Nagar, Akurdi Gaothan, Dattawadi, Akurdi, Pune 411035",
+    href: "https://maps.app.goo.gl/i7VqYRV4YFvNRdTc8",
   },
   {
     icon: Phone,
     label: "Phone",
-    value: "+91 98765 43210",
-    href: "tel:+919876543210",
+    value: "+91 95618 78293",
+    href: "tel:+919561878293",
   },
   {
     icon: Mail,
     label: "Email",
-    value: "support@mahalaxmisteels.com",
-    href: "mailto:support@mahalaxmisteels.com",
+    value: "mahalaxmisteels08@gmail.com",
+    href: "mailto:mahalaxmisteels08@gmail.com",
   },
   {
     icon: Clock,
     label: "Hours",
-    value: "Mon – Sat: 9:00 AM – 8:00 PM",
+    value: "Mon – Sun: 9:00 AM – 10:00 PM",
   },
 ];
 
@@ -58,7 +58,7 @@ const SOCIAL = [
   {
     icon: MessageCircle,
     label: "WhatsApp",
-    href: "https://wa.me/919511289914",
+    href: "https://wa.me/919561878293",
     hoverClass: "hover:bg-emerald-500 hover:text-white hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/20",
   },
   {
@@ -88,9 +88,9 @@ const Footer = () => {
 
             {/* Brand */}
             <div className="flex items-center gap-4 group cursor-pointer">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-900/20 group-hover:scale-105 transition-transform duration-300">
-                <Utensils className="w-6 h-6 text-white" />
-              </div>
+              <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl flex items-center justify-center group-hover:scale-105 group-hover:rotate-3 shadow-md shadow-blue-900/20 transition-all duration-300">
+              <span className="text-white font-black text-lg drop-shadow-sm">M</span>
+            </div>
               <div>
                 <p className="text-white font-extrabold text-xl leading-tight tracking-tight">
                   Mahalaxmi Steels
@@ -121,8 +121,7 @@ const Footer = () => {
             {/* Col 1 — About + Social (Wider) */}
             <div className="sm:col-span-2 lg:col-span-4 lg:pr-8">
               <p className="text-slate-400 text-sm leading-relaxed mb-8 max-w-md">
-                Your trusted destination since <span className="text-white font-bold">1995</span> for premium 
-                quality kitchen utensils, steelware, copper & brass items, and modern home appliances across Maharashtra.
+                Your trusted destination for quality stainless steel utensils, kitchen essentials, durable cookware, and affordable home appliances. Proudly serving Akurdi and the Pimpri-Chinchwad community.
               </p>
 
               <div className="flex items-center gap-3">

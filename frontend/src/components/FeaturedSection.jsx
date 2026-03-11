@@ -9,12 +9,12 @@ import ProductCard from "./ProductCard";
 import { useProducts } from "../context/ProductContext";
 
 const WHY_US = [
-  { icon: Shield,     title: "100% Genuine Products", desc: "Every item is quality-checked and ISI certified",    color: "text-blue-600",   bg: "bg-blue-50"   },
-  { icon: Truck,      title: "Free Delivery",         desc: "Free shipping on orders above ₹999 across India",  color: "text-green-600",  bg: "bg-green-50"  },
-  { icon: RefreshCw,  title: "Easy Returns",          desc: "Hassle-free 7-day return & exchange policy",       color: "text-purple-600", bg: "bg-purple-50" },
-  { icon: Headphones, title: "Dedicated Support",     desc: "Local Pune-based team available Mon–Sat",          color: "text-orange-600", bg: "bg-orange-50" },
-  { icon: Award,      title: "Trusted Since 1995",    desc: "30+ years of serving homes across Maharashtra",    color: "text-yellow-600", bg: "bg-yellow-50" },
-  { icon: BadgeCheck, title: "Best Price Guarantee",  desc: "Found it cheaper? We'll match the price",          color: "text-red-600",    bg: "bg-red-50"    },
+  { icon: Shield,     title: "Quality Steel Utensils",   desc: "Premium stainless steel kitchenware built to last for years",     color: "text-blue-600",   bg: "bg-blue-50"   },
+  { icon: Truck,      title: "Free Delivery",             desc: "Free shipping on orders above ₹999 across Pimpri-Chinchwad",   color: "text-green-600",  bg: "bg-green-50"  },
+  { icon: RefreshCw,  title: "Kitchen Essentials",        desc: "Everything your kitchen needs — from cookware to appliances",  color: "text-purple-600", bg: "bg-purple-50" },
+  { icon: Headphones, title: "Dedicated Support",         desc: "Local Akurdi-based team available Mon–Sat for assistance",    color: "text-orange-600", bg: "bg-orange-50" },
+  { icon: Award,      title: "Durable Cookware",          desc: "Heavy-duty pots, pans & kadais for everyday cooking",        color: "text-yellow-600", bg: "bg-yellow-50" },
+  { icon: BadgeCheck, title: "Affordable Appliances",     desc: "Home appliances at the best prices in Pimpri-Chinchwad",     color: "text-red-600",    bg: "bg-red-50"    },
 ];
 
 const SectionHeader = ({ eyebrow, title, subtitle, linkLabel, onLink }) => (
@@ -262,7 +262,7 @@ const WhyChooseUsSection = () => (
         </div>
         <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">Why Choose Mahalaxmi Steels?</h2>
         <p className="text-base text-slate-500 max-w-2xl mx-auto leading-relaxed">
-          Serving homes with premium quality kitchenware and appliances since 1995. We prioritize trust, quality, and your satisfaction above all else.
+          Serving homes in Akurdi and Pimpri-Chinchwad with quality kitchenware and affordable home appliances. We prioritize durability, trust, and your satisfaction above all.
         </p>
       </div>
 
@@ -288,9 +288,9 @@ const WhyChooseUsSection = () => (
         
         <div className="relative z-10 grid grid-cols-2 lg:grid-cols-4 gap-8 divide-x divide-blue-500/30">
           {[
-            { value: "30+",    label: "Years in Business"  },
-            { value: "50k+",   label: "Happy Customers"    },
-            { value: "500+",   label: "Products Available" },
+            { value: "2+",     label: "Years in Business"  },
+            { value: "500+",   label: "Happy Customers"    },
+            { value: "200+",   label: "Products Available" },
             { value: "4.8/5",  label: "Average Rating"     },
           ].map((stat, i) => (
             <div key={i} className={`text-center ${i % 2 !== 0 && i < 2 ? 'border-l-0 sm:border-l' : ''}`}>
