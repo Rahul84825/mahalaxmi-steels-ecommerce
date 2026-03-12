@@ -1,6 +1,7 @@
 import { useNavigate, Link } from "react-router-dom";
 import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, ShieldCheck, Truck, RotateCcw, ChevronRight, PackageX, Tag } from "lucide-react";
 import { useCart } from "../context/CartContext";
+import { useProducts } from "../context/ProductContext";
 
 const CATEGORY_COLORS = {
   "Stainless Steel": "bg-slate-50 text-slate-600 border-slate-100",
@@ -14,11 +15,25 @@ const EMOJI_MAP = { "Stainless Steel": "🥘", "Copper Utensils": "🏺", "Pooja
 
 const CartItem = ({ item }) => {
   const { updateQuantity, removeFromCart } = useCart();
+  const { categories } = useProducts();
   const id = item._id || item.id;
   const originalPrice = item.originalPrice || item.mrp || item.price;
   const savings = originalPrice - item.price;
   const discountPct = originalPrice > item.price ? Math.round((savings / originalPrice) * 100) : 0;
-  const categoryLabel = typeof item.category === "object" ? item.category?.name : item.category;
+
+  // Resolve category name — never display a raw MongoDB _id
+  const resolveCategoryLabel = (cat) => {
+    if (!cat) return "";
+    if (typeof cat === "object") return cat.name || cat.label || "";
+    // Known slugs
+    const SLUG_MAP = { steel: "Stainless Steel", copper: "Copper Utensils", brass: "Pital (Brass)", pooja: "Pooja Essentials", appliances: "Home Appliances" };
+    if (SLUG_MAP[cat]) return SLUG_MAP[cat];
+    // Lookup by _id in context
+    const found = categories?.find((c) => (c._id || c.id) === cat || c.slug === cat);
+    return found?.name || found?.label || "";
+  };
+
+  const categoryLabel = resolveCategoryLabel(item.category);
   const hasRealImage = item.image && item.image.startsWith("http");
 
   return (
@@ -40,9 +55,11 @@ const CartItem = ({ item }) => {
       <div className="flex-1 min-w-0 flex flex-col justify-center">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <span className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full border ${CATEGORY_COLORS[categoryLabel] || "bg-slate-50 border-slate-100 text-slate-500"}`}>
-              {categoryLabel}
-            </span>
+            {categoryLabel && (
+              <span className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full border ${CATEGORY_COLORS[categoryLabel] || "bg-slate-50 border-slate-100 text-slate-500"}`}>
+                {categoryLabel}
+              </span>
+            )}
             <h3 className="mt-2 text-sm sm:text-base font-semibold text-slate-800 leading-snug line-clamp-2">
               {item.name}
             </h3>
