@@ -237,10 +237,10 @@ const OrderConfirmation = ({ orderId, dbOrderId, address = {}, paymentMethod = "
   const [submitting, setSubmitting]     = useState(false);
 
   const handleTxnSubmit = async () => {
-    if (!upiTxnId.trim()) return;
+    if (!(upiTxnId || "").trim()) return;
     setSubmitting(true);
     try {
-      await onSubmitUpiTxn(dbOrderId, upiTxnId.trim());
+      await onSubmitUpiTxn(dbOrderId, (upiTxnId || "").trim());
       setTxnSubmitted(true);
     } catch {
       // silently ignore
@@ -289,7 +289,7 @@ const OrderConfirmation = ({ orderId, dbOrderId, address = {}, paymentMethod = "
             />
             <button
               onClick={handleTxnSubmit}
-              disabled={submitting || !upiTxnId.trim()}
+              disabled={submitting || !(upiTxnId || "").trim()}
               className="px-4 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white text-sm font-semibold rounded-lg transition-colors disabled:cursor-not-allowed"
             >
               {submitting ? "Submitting..." : "Submit"}
@@ -421,16 +421,16 @@ const Checkout = () => {
   // ── Validation ────────────────────────────────────────────────────
   const validateAddress = () => {
     const e = {};
-    if (!address.name.trim())    e.name    = "Full name is required";
-    if (!address.phone.trim())   e.phone   = "Phone number is required";
+    if (!(address.name || "").trim())    e.name    = "Full name is required";
+    if (!(address.phone || "").trim())   e.phone   = "Phone number is required";
     else if (!isValidIndianPhone(address.phone)) e.phone = "Enter a valid 10-digit Indian mobile number";
-    if (!address.email.trim())   e.email   = "Email is required";
+    if (!(address.email || "").trim())   e.email   = "Email is required";
     else if (!/\S+@\S+\.\S+/.test(address.email)) e.email = "Enter a valid email";
-    if (!address.address1.trim()) e.address1 = "Address is required";
-    if (!address.city.trim())    e.city    = "City is required";
-    if (!address.pincode.trim()) e.pincode = "Pincode is required";
+    if (!(address.address1 || "").trim()) e.address1 = "Address is required";
+    if (!(address.city || "").trim())    e.city    = "City is required";
+    if (!(address.pincode || "").trim()) e.pincode = "Pincode is required";
     else if (!/^\d{6}$/.test(address.pincode)) e.pincode = "Enter a valid 6-digit pincode";
-    if (!address.state.trim())   e.state   = "State is required";
+    if (!(address.state || "").trim())   e.state   = "State is required";
     return e;
   };
 

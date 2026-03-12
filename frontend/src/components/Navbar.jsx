@@ -42,8 +42,8 @@ const Navbar = memo(() => {
 
   const handleSearch = useCallback((e) => {
     e.preventDefault();
-    if (!searchQuery.trim()) return;
-    navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+    if (!(searchQuery || "").trim()) return;
+    navigate(`/products?search=${encodeURIComponent((searchQuery || "").trim())}`);
     setMobileSearchOpen(false);
   }, [searchQuery, navigate]);
 

@@ -35,8 +35,8 @@ const OfferModal = ({ offer, onSave, onClose }) => {
 
   const validate = () => {
     const e = {};
-    if (!form.title.trim()) e.title = "Title is required";
-    if (!form.discount.trim()) e.discount = "Discount text is required";
+    if (!(form.title || "").trim()) e.title = "Title is required";
+    if (!(form.discount || "").trim()) e.discount = "Discount text is required";
     return e;
   };
 

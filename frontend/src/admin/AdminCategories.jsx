@@ -25,9 +25,9 @@ const CategoryModal = ({ category, onSave, onClose, existingIds }) => {
 
   const validate = () => {
     const e = {};
-    if (!form.label.trim()) e.label = "Category name is required";
+    if (!(form.label || "").trim()) e.label = "Category name is required";
     if (!isEdit) {
-      if (!form.id.trim()) e.id = "Category ID is required";
+      if (!(form.id || "").trim()) e.id = "Category ID is required";
       if (!/^[a-z0-9_-]+$/.test(form.id)) e.id = "ID must be lowercase letters/numbers/hyphens only";
       if (existingIds.includes(form.id)) e.id = "This ID already exists";
     }

@@ -11,8 +11,8 @@ const Hero = memo(() => {
 
   const handleSearch = useCallback((e) => {
     e.preventDefault();
-    if (!searchQuery.trim()) return;
-    navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+    if (!(searchQuery || "").trim()) return;
+    navigate(`/products?search=${encodeURIComponent((searchQuery || "").trim())}`);
   }, [searchQuery, navigate]);
 
   return (

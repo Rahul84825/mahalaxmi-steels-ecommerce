@@ -99,7 +99,7 @@ const ProductFilter = ({ filters, onChange, totalResults }) => {
     filters.inStockOnly;
 
   const clearAll = () =>
-    onChange({ category: "all", priceRange: "all", sortBy: "default", inStockOnly: false });
+    onChange({ category: "all", priceRange: "all", sortBy: "default", inStockOnly: false, search: "" });
 
   const activeCategoryLabel =
     categoryOptions.find((c) => c.id === filters.category)?.label || filters.category;

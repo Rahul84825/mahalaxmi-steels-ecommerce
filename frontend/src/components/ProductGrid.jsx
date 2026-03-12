@@ -83,13 +83,13 @@ const ProductGrid = ({ initialFilters }) => {
     })
     .filter((p) => !filters.inStockOnly || p.inStock)
     .filter((p) => {
-      if (!filters.search.trim()) return true;
-      const q = filters.search.toLowerCase();
+      if (!(filters.search || "").trim()) return true;
+      const q = (filters.search || "").toLowerCase();
       return (
-        p.name.toLowerCase().includes(q) ||
+        (p.name || "").toLowerCase().includes(q) ||
         (typeof p.category === "string" ? p.category : p.category?.name || "").toLowerCase().includes(q) ||
         (p.brand || "").toLowerCase().includes(q) ||
-        (p.tags || []).some((t) => t.toLowerCase().includes(q))
+        (p.tags || []).some((t) => (t || "").toLowerCase().includes(q))
       );
     })
     .sort((a, b) => {
@@ -120,7 +120,7 @@ const ProductGrid = ({ initialFilters }) => {
           {loading
             ? Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)
             : filteredProducts.length === 0
-            ? <EmptyState onClear={clearFilters} isSearch={!!filters.search} query={filters.search} />
+            ? <EmptyState onClear={clearFilters} isSearch={!!(filters.search || "")} query={filters.search || ""} />
             : filteredProducts.map((product) => (
                 <ProductCard key={product._id || product.id} product={product} />
               ))

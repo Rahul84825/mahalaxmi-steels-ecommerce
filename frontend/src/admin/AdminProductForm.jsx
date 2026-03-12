@@ -55,7 +55,7 @@ const AdminProductForm = ({ mode = "add" }) => {
 
   const validate = () => {
     const e = {};
-    if (!form.name.trim())                              e.name     = "Product name is required";
+    if (!(form.name || "").trim())                              e.name     = "Product name is required";
     if (!form.price || isNaN(form.price) || +form.price <= 0) e.price = "Enter a valid price";
     if (!form.category)                                 e.category = "Category is required";
     return e;
@@ -101,7 +101,7 @@ const AdminProductForm = ({ mode = "add" }) => {
       mrp:           +form.mrp || +form.price,
       originalPrice: +form.mrp || +form.price,
       stock:         +form.stock || 0,
-      tags:          form.tags.split(",").map((t) => t.trim()).filter(Boolean),
+      tags:          (form.tags || "").split(",").map((t) => t.trim()).filter(Boolean),
       inStock:  form.inStock,
       featured: form.featured,
     };
