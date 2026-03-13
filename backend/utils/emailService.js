@@ -1,6 +1,7 @@
 const { Resend } = require("resend");
 
 const DEFAULT_FROM = process.env.EMAIL_FROM || "Mahalaxmi Steels <onboarding@resend.dev>";
+let resendClient = null;
 
 const getMissingEmailEnvVars = () => {
   const requiredVars = ["RESEND_API_KEY"];
@@ -15,10 +16,18 @@ const assertEmailConfig = () => {
   }
 };
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const getResendClient = () => {
+  assertEmailConfig();
+
+  if (!resendClient) {
+    resendClient = new Resend(process.env.RESEND_API_KEY);
+  }
+
+  return resendClient;
+};
 
 const verifyEmailService = async () => {
-  assertEmailConfig();
+  getResendClient();
 
   return {
     ready: true,
@@ -38,6 +47,8 @@ const sendEmail = async ({ to, subject, html, text }) => {
   }
 
   try {
+    const resend = getResendClient();
+
     const result = await resend.emails.send({
       from: DEFAULT_FROM,
       to: Array.isArray(to) ? to : [to],
