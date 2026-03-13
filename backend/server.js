@@ -5,7 +5,7 @@ const express    = require("express");
 const cors       = require("cors");
 const connectDB  = require("./config/db");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
-const { transporter } = require("./utils/mailer");
+const { transporter, verifyTransporter } = require("./utils/mailer");
 
 // Connect to MongoDB
 connectDB();
@@ -35,15 +35,8 @@ app.get("/api/health", (req, res) => {
 });
 
 app.get("/test-email", async (req, res) => {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    return res.status(500).json({
-      success: false,
-      message: "EMAIL_USER and EMAIL_PASS must be configured",
-    });
-  }
-
   try {
-    await transporter.verify();
+    await verifyTransporter();
 
     const info = await transporter.sendMail({
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
@@ -54,7 +47,11 @@ app.get("/test-email", async (req, res) => {
 
     res.json({ success: true, message: "Email sent", messageId: info.messageId });
   } catch (err) {
-    console.error("/test-email failed:", err.message);
+    console.error("/test-email failed:", {
+      message: err.message,
+      code: err.code,
+      command: err.command,
+    });
     res.status(500).json({ success: false, message: "Email send failed", error: err.message });
   }
 });
