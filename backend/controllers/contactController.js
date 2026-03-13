@@ -1,15 +1,5 @@
 const asyncHandler = require("express-async-handler");
-const nodemailer   = require("nodemailer");
-
-const transporter = nodemailer.createTransport({
-  host:   process.env.EMAIL_HOST,
-  port:   +process.env.EMAIL_PORT,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const { sendEmail } = require("../utils/mailer");
 
 // POST /api/contact
 const sendContactEmail = asyncHandler(async (req, res) => {
@@ -21,8 +11,7 @@ const sendContactEmail = asyncHandler(async (req, res) => {
   }
 
   // Email to admin
-  await transporter.sendMail({
-    from:    process.env.EMAIL_FROM,
+  await sendEmail({
     to:      process.env.ADMIN_EMAIL,
     subject: `📩 New Contact: ${subject || "General Enquiry"} — ${name}`,
     html: `
@@ -46,8 +35,7 @@ const sendContactEmail = asyncHandler(async (req, res) => {
   });
 
   // Auto-reply to customer
-  await transporter.sendMail({
-    from:    process.env.EMAIL_FROM,
+  await sendEmail({
     to:      email,
     subject: "We received your message — Mahalaxmi Steels",
     html: `
