@@ -9,6 +9,9 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  connectionTimeout: Number(process.env.EMAIL_CONNECTION_TIMEOUT || 15000),
+  greetingTimeout:   Number(process.env.EMAIL_GREETING_TIMEOUT || 10000),
+  socketTimeout:     Number(process.env.EMAIL_SOCKET_TIMEOUT || 20000),
 });
 
 // Verify connection on startup
@@ -24,7 +27,7 @@ transporter.verify().then(() => {
  */
 const sendEmail = async ({ to, subject, html }) => {
   await transporter.sendMail({
-    from: process.env.EMAIL_FROM,
+    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
     to,
     subject,
     html,

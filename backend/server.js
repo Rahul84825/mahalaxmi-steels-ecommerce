@@ -35,18 +35,27 @@ app.get("/api/health", (req, res) => {
 });
 
 app.get("/test-email", async (req, res) => {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    return res.status(500).json({
+      success: false,
+      message: "EMAIL_USER and EMAIL_PASS must be configured",
+    });
+  }
+
   try {
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+    await transporter.verify();
+
+    const info = await transporter.sendMail({
+      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
       to: process.env.EMAIL_USER,
       subject: "Render Test",
-      text: "Email working on Render"
+      text: "Email working on Render",
     });
 
-    res.send("Email sent");
+    res.json({ success: true, message: "Email sent", messageId: info.messageId });
   } catch (err) {
-    console.error(err);
-    res.status(500).send(err.message);
+    console.error("/test-email failed:", err.message);
+    res.status(500).json({ success: false, message: "Email send failed", error: err.message });
   }
 });
 
