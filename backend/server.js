@@ -35,14 +35,7 @@ app.get("/api/health", (req, res) => {
 });
 
 app.get("/test-email", async (req, res) => {
-  const testRecipient = process.env.EMAIL_USER || process.env.ADMIN_EMAIL;
-
-  if (!testRecipient) {
-    return res.status(500).json({
-      success: false,
-      message: "EMAIL_USER or ADMIN_EMAIL must be configured for test emails",
-    });
-  }
+  const testRecipient = "mahalaxmisteels08@gmail.com";
 
   try {
     await verifyEmailService();

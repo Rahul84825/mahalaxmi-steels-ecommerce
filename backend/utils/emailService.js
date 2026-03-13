@@ -1,6 +1,6 @@
 const { Resend } = require("resend");
 
-const DEFAULT_FROM = process.env.EMAIL_FROM || "Mahalaxmi Steels <onboarding@resend.dev>";
+const DEFAULT_FROM = "Mahalaxmi Steels <onboarding@resend.dev>";
 let resendClient = null;
 
 const getMissingEmailEnvVars = () => {
