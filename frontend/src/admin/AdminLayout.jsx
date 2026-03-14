@@ -25,6 +25,8 @@ const AdminLayout = () => {
   const location  = useLocation();
   const { logout, user } = useAuth();
   const orderSoundRef = useRef(null);
+  const audioUnlockedRef = useRef(false);
+  const pendingSoundRef = useRef(false);
 
   // ── Global new-order notification sound (all admin pages) ──────────────────
   useEffect(() => {
@@ -32,13 +34,69 @@ const AdminLayout = () => {
 
     // Single reusable Audio instance — no duplicate sounds
     const sound = new Audio("/sounds/zomato_ring_5.mp3");
-    sound.loop = true;
+    sound.preload = "auto";
+    sound.loop = false;
     orderSoundRef.current = sound;
+    audioUnlockedRef.current = false;
+    pendingSoundRef.current = false;
+
+    sound.load();
 
     const stopSound = () => {
       if (!sound.paused) {
         sound.pause();
+      }
+      sound.currentTime = 0;
+      pendingSoundRef.current = false;
+    };
+
+    const playNotificationSound = async () => {
+      sound.loop = document.hidden;
+
+      // While hidden, keep a single looping alert alive instead of restarting it.
+      if (document.hidden && !sound.paused) {
+        return;
+      }
+
+      if (!sound.paused) {
+        sound.pause();
+      }
+
+      sound.currentTime = 0;
+
+      try {
+        await sound.play();
+        pendingSoundRef.current = false;
+      } catch (err) {
+        pendingSoundRef.current = true;
+        console.warn("[AdminLayout] Sound playback failed:", err?.message || err);
+      }
+    };
+
+    const unlockAudio = async () => {
+      if (audioUnlockedRef.current) {
+        if (pendingSoundRef.current) {
+          await playNotificationSound();
+        }
+        return;
+      }
+
+      const previousMuted = sound.muted;
+      sound.muted = true;
+      sound.currentTime = 0;
+
+      try {
+        await sound.play();
+        sound.pause();
         sound.currentTime = 0;
+        sound.muted = previousMuted;
+        audioUnlockedRef.current = true;
+
+        if (pendingSoundRef.current) {
+          await playNotificationSound();
+        }
+      } catch (err) {
+        sound.muted = previousMuted;
       }
     };
 
@@ -46,7 +104,11 @@ const AdminLayout = () => {
     const handleVisibilityChange = () => {
       if (!document.hidden) stopSound();
     };
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pointerdown", unlockAudio);
+    window.addEventListener("keydown", unlockAudio);
+    window.addEventListener("touchstart", unlockAudio);
 
     const socket = io(SOCKET_URL, {
       transports: ["websocket", "polling"],
@@ -55,17 +117,7 @@ const AdminLayout = () => {
     });
 
     socket.on("newOrder", () => {
-      // If the admin tab is hidden, loop the sound until they return
-      if (document.hidden) {
-        sound.currentTime = 0;
-        sound.loop = true;
-        sound.play().catch(() => {});
-      } else {
-        // Tab is active — play once so the admin hears it immediately
-        sound.loop = false;
-        sound.currentTime = 0;
-        sound.play().catch(() => {});
-      }
+      playNotificationSound();
     });
 
     socket.on("connect_error", (err) => {
@@ -75,7 +127,11 @@ const AdminLayout = () => {
     return () => {
       stopSound();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pointerdown", unlockAudio);
+      window.removeEventListener("keydown", unlockAudio);
+      window.removeEventListener("touchstart", unlockAudio);
       socket.disconnect();
+      orderSoundRef.current = null;
     };
   }, [user?.role]);
 
