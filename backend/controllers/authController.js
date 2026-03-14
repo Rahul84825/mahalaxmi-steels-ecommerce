@@ -67,11 +67,11 @@ const register = asyncHandler(async (req, res) => {
   `;
 
   try {
-    await sendEmail({
-      to:      email,
-      subject: "Verify your email — Mahalaxmi Steels",
-      html,
-    });
+    await sendEmail(
+      email,
+      "Verify your email — Mahalaxmi Steels",
+      html
+    );
   } catch (err) {
     // If email fails, delete the user and return error
     await User.findByIdAndDelete(user._id);
@@ -135,11 +135,11 @@ const verifyEmail = asyncHandler(async (req, res) => {
     </div>
   `;
 
-  sendEmail({
-    to:      user.email,
-    subject: "Welcome to Mahalaxmi Steels! 🎉",
-    html:    welcomeHtml,
-  }).catch((err) => {
+  sendEmail(
+    user.email,
+    "Welcome to Mahalaxmi Steels! 🎉",
+    welcomeHtml
+  ).catch((err) => {
     console.error("[email] Welcome email failed", {
       userId: user._id,
       email: user.email,
@@ -200,7 +200,7 @@ const resendVerification = asyncHandler(async (req, res) => {
     </div>
   `;
 
-  await sendEmail({ to: email, subject: "New verification link — Mahalaxmi Steels", html });
+  await sendEmail(email, "New verification link — Mahalaxmi Steels", html);
 
   res.json({ message: "If this email is registered, a verification link has been sent." });
 });

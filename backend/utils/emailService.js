@@ -1,12 +1,10 @@
-const { Resend } = require("resend");
+const nodemailer = require("nodemailer");
 
-const DEFAULT_FROM = "Mahalaxmi Steels <onboarding@resend.dev>";
-let resendClient = null;
-
-const getEmailFromAddress = () => process.env.EMAIL_FROM || DEFAULT_FROM;
+const DEFAULT_FROM = "Mahalaxmi Steels <mahalaxmisteels08@gmail.com>";
+let transporter = null;
 
 const getMissingEmailEnvVars = () => {
-  const requiredVars = ["RESEND_API_KEY"];
+  const requiredVars = ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS"];
   return requiredVars.filter((name) => !process.env[name]);
 };
 
@@ -18,29 +16,41 @@ const assertEmailConfig = () => {
   }
 };
 
-const getResendClient = () => {
+const getEmailFromAddress = () => process.env.EMAIL_FROM || DEFAULT_FROM;
+
+const getTransporter = () => {
   assertEmailConfig();
 
-  if (!resendClient) {
-    resendClient = new Resend(process.env.RESEND_API_KEY);
+  if (!transporter) {
+    const port = Number(process.env.SMTP_PORT);
+    transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port,
+      secure: port === 465,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
   }
 
-  return resendClient;
+  return transporter;
 };
 
 const verifyEmailService = async () => {
-  getResendClient();
-
-  const fromAddress = getEmailFromAddress();
+  const smtpTransporter = getTransporter();
+  await smtpTransporter.verify();
 
   return {
     ready: true,
-    provider: "resend",
-    fromAddress,
+    provider: "nodemailer-brevo-smtp",
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT),
+    fromAddress: getEmailFromAddress(),
   };
 };
 
-const sendEmail = async ({ to, subject, html, text }) => {
+const sendEmail = async (to, subject, html) => {
   assertEmailConfig();
 
   if (!to) {
@@ -51,32 +61,34 @@ const sendEmail = async ({ to, subject, html, text }) => {
     throw new Error("Email subject is required");
   }
 
+  if (!html) {
+    throw new Error("Email html body is required");
+  }
+
   try {
-    const resend = getResendClient();
-    const fromAddress = getEmailFromAddress();
-
-    const result = await resend.emails.send({
-      from: fromAddress,
-      to: Array.isArray(to) ? to : [to],
-      subject,
-      html,
-      text,
-    });
-
-    if (result.error) {
-      throw new Error(result.error.message || "Resend API request failed");
-    }
-
-    return result.data;
-  } catch (err) {
-    console.error("Resend sendEmail failed:", {
-      message: err.message,
-      name: err.name,
-      statusCode: err.statusCode,
+    const smtpTransporter = getTransporter();
+    const info = await smtpTransporter.sendMail({
+      from: getEmailFromAddress(),
       to,
       subject,
-      from: getEmailFromAddress(),
-      hasApiKey: Boolean(process.env.RESEND_API_KEY),
+      html,
+    });
+
+    return info;
+  } catch (err) {
+    console.error("Nodemailer sendEmail failed:", {
+      message: err.message,
+      name: err.name,
+      code: err.code,
+      command: err.command,
+      response: err.response,
+      responseCode: err.responseCode,
+      to,
+      subject,
+      host: process.env.SMTP_HOST || null,
+      port: process.env.SMTP_PORT || null,
+      hasSmtpUser: Boolean(process.env.SMTP_USER),
+      hasSmtpPass: Boolean(process.env.SMTP_PASS),
       stack: err.stack,
     });
     throw err;

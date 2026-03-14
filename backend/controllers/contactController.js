@@ -11,10 +11,10 @@ const sendContactEmail = asyncHandler(async (req, res) => {
   }
 
   // Email to admin
-  await sendEmail({
-    to:      process.env.ADMIN_EMAIL,
-    subject: `📩 New Contact: ${subject || "General Enquiry"} — ${name}`,
-    html: `
+  await sendEmail(
+    process.env.ADMIN_EMAIL,
+    `📩 New Contact: ${subject || "General Enquiry"} — ${name}`,
+    `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
         <h2 style="color:#1d4ed8">New Contact Form Submission</h2>
         <table style="width:100%;border-collapse:collapse">
@@ -31,14 +31,14 @@ const sendContactEmail = asyncHandler(async (req, res) => {
           <p style="margin:0;white-space:pre-wrap;color:#374151">${message}</p>
         </div>
       </div>
-    `,
-  });
+    `
+  );
 
   // Auto-reply to customer
-  await sendEmail({
-    to:      email,
-    subject: "We received your message — Mahalaxmi Steels",
-    html: `
+  await sendEmail(
+    email,
+    "We received your message — Mahalaxmi Steels",
+    `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
         <div style="background:#1d4ed8;padding:20px;border-radius:12px 12px 0 0;text-align:center">
           <h2 style="color:white;margin:0">Thanks for reaching out!</h2>
@@ -57,8 +57,8 @@ const sendContactEmail = asyncHandler(async (req, res) => {
           </p>
         </div>
       </div>
-    `,
-  });
+    `
+  );
 
   res.json({ message: "Message sent successfully" });
 });

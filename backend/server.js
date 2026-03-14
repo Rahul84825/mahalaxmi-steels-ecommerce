@@ -40,19 +40,24 @@ app.get("/test-email", async (req, res) => {
   try {
     await verifyEmailService();
 
-    const info = await sendEmail({
-      to: testRecipient,
-      subject: "Render Test",
-      html: "<p>Email working on Render with Resend</p>",
-      text: "Email working on Render",
-    });
+    const info = await sendEmail(
+      testRecipient,
+      "SMTP Test",
+      "<p>Email working on Render/Vercel with Brevo SMTP + Nodemailer</p>"
+    );
 
-    res.json({ success: true, message: "Email sent", emailId: info?.id || null });
+    res.json({ success: true, message: "Email sent", messageId: info?.messageId || null });
   } catch (err) {
     console.error("/test-email failed:", {
       message: err.message,
       name: err.name,
-      statusCode: err.statusCode,
+      code: err.code,
+      responseCode: err.responseCode,
+      host: process.env.SMTP_HOST || null,
+      port: process.env.SMTP_PORT || null,
+      hasSmtpUser: Boolean(process.env.SMTP_USER),
+      hasSmtpPass: Boolean(process.env.SMTP_PASS),
+      stack: err.stack,
     });
     res.status(500).json({ success: false, message: "Email send failed", error: err.message });
   }
@@ -73,6 +78,8 @@ app.listen(PORT, () => {
     .then((status) => {
       console.log("✅ Email service ready", {
         provider: status.provider,
+        host: status.host,
+        port: status.port,
         fromAddress: status.fromAddress,
       });
     })
@@ -80,7 +87,10 @@ app.listen(PORT, () => {
       console.error("❌ Email service configuration error", {
         message: err.message,
         name: err.name,
-        hasResendApiKey: Boolean(process.env.RESEND_API_KEY),
+        host: process.env.SMTP_HOST || null,
+        port: process.env.SMTP_PORT || null,
+        hasSmtpUser: Boolean(process.env.SMTP_USER),
+        hasSmtpPass: Boolean(process.env.SMTP_PASS),
         emailFrom: process.env.EMAIL_FROM || null,
         stack: err.stack,
       });

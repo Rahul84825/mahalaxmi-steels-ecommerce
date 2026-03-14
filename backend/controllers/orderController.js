@@ -75,11 +75,11 @@ const sendOrderEmail = async (order) => {
     </div>
   `;
 
-  await sendEmail({
-    to:      order.customer.email,
-    subject: `Order Confirmed #${order.orderId} — Mahalaxmi Steels`,
-    html,
-  });
+  await sendEmail(
+    order.customer.email,
+    `Order Confirmed #${order.orderId} — Mahalaxmi Steels`,
+    html
+  );
 };
 
 // ── Send new-order notification email to admin ────────────────────────────────
@@ -109,11 +109,11 @@ const sendAdminNotification = async (order) => {
     </div>
   `;
 
-  await sendEmail({
-    to:      adminEmail,
-    subject: `🛒 New Order #${order.orderId} — ₹${order.total.toLocaleString("en-IN")}`,
-    html,
-  });
+  await sendEmail(
+    adminEmail,
+    `🛒 New Order #${order.orderId} — ₹${order.total.toLocaleString("en-IN")}`,
+    html
+  );
 };
 
 // ── Send delivery confirmation email to customer ──────────────────────────────
@@ -157,11 +157,11 @@ const sendDeliveryEmail = async (order) => {
     </div>
   `;
 
-  await sendEmail({
-    to:      order.customer.email,
-    subject: `✅ Order Delivered #${order.orderId} — Mahalaxmi Steels`,
-    html,
-  });
+  await sendEmail(
+    order.customer.email,
+    `✅ Order Delivered #${order.orderId} — Mahalaxmi Steels`,
+    html
+  );
 };
 
 // ── Send delivery notification to admin ───────────────────────────────────────
@@ -186,11 +186,11 @@ const sendAdminDeliveryNotification = async (order) => {
     </div>
   `;
 
-  await sendEmail({
-    to:      adminEmail,
-    subject: `✅ Order Delivered #${order.orderId} — ${order.customer.name}`,
-    html,
-  });
+  await sendEmail(
+    adminEmail,
+    `✅ Order Delivered #${order.orderId} — ${order.customer.name}`,
+    html
+  );
 };
 
 // ── POST /api/orders ──────────────────────────────────────────────────────────
