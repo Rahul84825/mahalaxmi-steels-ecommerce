@@ -31,7 +31,7 @@ const AdminLayout = () => {
     if (!user || user.role !== "admin") return;
 
     // Single reusable Audio instance — no duplicate sounds
-    const sound = new Audio("/sounds/new-order.mp3");
+    const sound = new Audio("/sounds/zomato_ring_5.mp3");
     sound.loop = true;
     orderSoundRef.current = sound;
 
