@@ -1,12 +1,3 @@
-const CATEGORY_LABELS = {
-  steel: "Stainless Steel",
-  copper: "Copper Utensils",
-  brass: "Pital (Brass)",
-  pital: "Pital (Brass)",
-  pooja: "Pooja Essentials",
-  appliances: "Home Appliances",
-};
-
 const toStringValue = (value) => (typeof value === "string" ? value.trim() : "");
 
 const normalizeNameToSlug = (name = "") =>
@@ -27,8 +18,6 @@ export const getCategoryLabel = (category, categories = []) => {
   const key = toStringValue(category).toLowerCase();
   if (!key) return "";
 
-  if (CATEGORY_LABELS[key]) return CATEGORY_LABELS[key];
-
   const found = (categories || []).find((item) => {
     const id = item?._id || item?.id;
     return id === category || item?.slug === key || normalizeNameToSlug(item?.name) === key;
@@ -48,7 +37,6 @@ export const getCategorySlug = (category, categories = []) => {
   const found = (categories || []).find((item) => (item?._id || item?.id) === category);
 
   if (found?.slug) return found.slug;
-  if (CATEGORY_LABELS[key]) return key;
   return key;
 };
 

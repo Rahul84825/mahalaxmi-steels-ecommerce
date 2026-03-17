@@ -16,6 +16,7 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
   const isWishlisted = wishlist.includes(productId);
 
   const mrp = product.mrp || product.originalPrice || 0;
+  const primaryImage = product.image || (Array.isArray(product.images) ? product.images[0] : "") || "";
   const discount = mrp > product.price
     ? Math.round(((mrp - product.price) / mrp) * 100)
     : 0;
@@ -36,7 +37,7 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
   };
 
   const categoryLabel = getCategoryLabel(product.category, categories);
-  const hasRealImage = product.image && product.image.startsWith("http") && !imgError;
+  const hasRealImage = primaryImage && primaryImage.startsWith("http") && !imgError;
   const hasRating = product.rating > 0;
   const cardPadding = compact ? "p-4" : "p-5";
 
@@ -53,18 +54,18 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
       onClick={() => navigate(`/products/${productId}`)}
       className="bg-white rounded-[1.4rem] border border-slate-100 overflow-hidden group cursor-pointer hover:border-slate-200 hover:shadow-xl hover:shadow-slate-200/60 hover:-translate-y-1 transition-all duration-300 flex flex-col relative"
     >
-      <div className="relative bg-slate-50 overflow-hidden aspect-square w-full flex-shrink-0">
+      <div className="relative bg-slate-50 overflow-hidden aspect-square w-full shrink-0">
         {hasRealImage ? (
           <img
-            src={product.image} alt={product.name}
+            src={primaryImage} alt={product.name}
             loading="lazy"
             className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
             onError={() => setImgError(true)}
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-6xl group-hover:scale-110 transition-transform duration-700 ease-out bg-slate-100/50">
-            {product.image && !product.image.startsWith("http")
-              ? product.image
+            {primaryImage && !primaryImage.startsWith("http")
+              ? primaryImage
               : "📦"
             }
           </div>

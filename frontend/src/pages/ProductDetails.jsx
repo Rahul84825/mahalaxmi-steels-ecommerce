@@ -11,14 +11,6 @@ import { useCart } from "../context/CartContext";
 import { useProducts } from "../context/ProductContext";
 import { getCategoryLabel, getCategorySlug } from "../utils/category";
 
-const CATEGORY_SPECS = {
-  steel:      [{ label: "Material", value: "Food-grade Stainless Steel (SS304)" }, { label: "Finish", value: "Mirror Polish" }, { label: "Dishwasher", value: "Safe" }, { label: "Induction", value: "Compatible" }, { label: "Warranty", value: "1 Year" }, { label: "Origin", value: "Made in India" }],
-  copper:     [{ label: "Material", value: "99% Pure Copper" }, { label: "Thickness", value: "1.5mm" }, { label: "Finish", value: "Handcrafted Polish" }, { label: "Health Benefit", value: "Ayurvedic, Anti-bacterial" }, { label: "Warranty", value: "6 Months" }, { label: "Origin", value: "Made in India" }],
-  brass:      [{ label: "Material", value: "Pure Pital (Brass)" }, { label: "Finish", value: "Traditional Polish" }, { label: "Use", value: "Puja / Kitchen" }, { label: "Care", value: "Hand Wash Only" }, { label: "Warranty", value: "6 Months" }, { label: "Origin", value: "Made in India" }],
-  pooja:      [{ label: "Material", value: "Brass / Copper" }, { label: "Finish", value: "Antique Gold Polish" }, { label: "Occasion", value: "Daily Puja, Festivals" }, { label: "Care", value: "Wipe with dry cloth" }, { label: "Warranty", value: "No Warranty" }, { label: "Origin", value: "Made in India" }],
-  appliances: [{ label: "Power", value: "750W – 1200W" }, { label: "Voltage", value: "220–240V, 50Hz" }, { label: "Certification", value: "ISI Marked" }, { label: "Warranty", value: "1 Year Manufacturer" }, { label: "Service", value: "Pan India Service Network" }, { label: "Origin", value: "Made in India" }],
-};
-
 const StarRating = ({ rating }) => (
   <div className="flex">
     {[1,2,3,4,5].map((star) => (
@@ -103,7 +95,9 @@ const ProductDetails = () => {
   const savings = mrp > product.price ? mrp - product.price : 0;
   const categoryLabel = getCategoryLabel(product.category, categories);
   const categorySlug  = getCategorySlug(product.category, categories);
-  const specs = CATEGORY_SPECS[categorySlug] || CATEGORY_SPECS[product.category?.slug] || CATEGORY_SPECS[product.category] || [];
+  const specs = product.specifications
+    ? Object.entries(product.specifications).map(([label, value]) => ({ label, value }))
+    : [];
 
   // rating > 0 to avoid rendering "0"
   const hasRating = product.rating > 0;
@@ -122,7 +116,7 @@ const ProductDetails = () => {
             <Link to={`/products?category=${categorySlug}`} className="hover:text-blue-600 transition-colors">{categoryLabel}</Link>
           </>}
           <ChevronRight className="w-3 h-3" />
-          <span className="text-gray-600 font-medium truncate max-w-[160px]">{product.name}</span>
+          <span className="text-gray-600 font-medium truncate max-w-40">{product.name}</span>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
@@ -198,7 +192,7 @@ const ProductDetails = () => {
                 <span className="text-sm font-semibold text-gray-700">Quantity:</span>
                 <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
                   <button onClick={() => setQty((q) => Math.max(1, q-1))} disabled={qty<=1} className="px-3 py-2 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><Minus className="w-4 h-4" /></button>
-                  <span className="px-5 py-2 text-sm font-bold text-gray-800 border-x border-gray-200 min-w-[48px] text-center">{qty}</span>
+                  <span className="px-5 py-2 text-sm font-bold text-gray-800 border-x border-gray-200 min-w-12 text-center">{qty}</span>
                   <button onClick={() => setQty((q) => Math.min(10, q+1))} disabled={qty>=10} className="px-3 py-2 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><Plus className="w-4 h-4" /></button>
                 </div>
                 <span className="text-xs text-gray-400">Max 10 per order</span>
@@ -236,7 +230,7 @@ const ProductDetails = () => {
             <div className="divide-y divide-gray-50">
               {specs.map((spec, i) => (
                 <div key={i} className="flex py-3 gap-4">
-                  <span className="text-sm text-gray-500 font-medium w-40 flex-shrink-0">{spec.label}</span>
+                  <span className="text-sm text-gray-500 font-medium w-40 shrink-0">{spec.label}</span>
                   <span className="text-sm text-gray-800 font-semibold">{spec.value}</span>
                 </div>
               ))}

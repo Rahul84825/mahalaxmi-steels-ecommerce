@@ -10,6 +10,9 @@ const offerSchema = new mongoose.Schema(
     linked_category: { type: String, default: "", trim: true },
     is_active: { type: Boolean, default: true },
     priority: { type: Number, default: 0 },
+    badge: { type: String, default: "", trim: true },
+    bg: { type: String, default: "from-blue-600 to-blue-800" },
+    accent: { type: String, default: "bg-blue-500" },
   },
   {
     timestamps: { createdAt: "created_at", updatedAt: "updated_at" },

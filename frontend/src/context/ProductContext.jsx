@@ -3,12 +3,69 @@ import { api } from "../utils/api";
 import { useAuth } from "./AuthContext";
 import { useSound } from "./SoundContext";
 
-// ── Kept for offline/fallback use ─────────────────────────────────
-const FALLBACK_OFFERS = [
-  { id: "o1", title: "Stainless Steel Fest",  subtitle: "Up to 40% off on all SS cookware",       badge: "Limited Time",   discount: "40% OFF", category: "steel",      active: true, bg: "from-slate-800 to-slate-600",   accent: "bg-slate-500",  icon: "🥘" },
-  { id: "o2", title: "Copper Wellness Sale",  subtitle: "Ayurvedic copper vessels at best price", badge: "Health Special", discount: "25% OFF", category: "copper",     active: true, bg: "from-orange-700 to-orange-500", accent: "bg-orange-400", icon: "🏺" },
-  { id: "o3", title: "Pooja Essentials",      subtitle: "Brass & copper spiritual items",         badge: "Festive Deal",   discount: "30% OFF", category: "pooja",      active: true, bg: "from-red-800 to-red-600",       accent: "bg-red-500",    icon: "🪔" },
-];
+const normalizeProduct = (p = {}) => {
+  const images = Array.isArray(p.images) ? p.images.filter(Boolean) : [];
+  const image = p.image || images[0] || "";
+  const isFeatured = p.is_featured ?? p.featured ?? false;
+  const isBestseller = p.is_bestseller ?? p.bestseller ?? false;
+  const isNew = p.is_new ?? p.isNew ?? false;
+  const categoryValue = p.category || p.category_id || null;
+
+  return {
+    ...p,
+    image,
+    images: image && !images.includes(image) ? [image, ...images] : images,
+    category: categoryValue,
+    category_id: p.category_id || categoryValue,
+    is_featured: !!isFeatured,
+    is_bestseller: !!isBestseller,
+    is_new: !!isNew,
+    featured: !!isFeatured,
+    bestseller: !!isBestseller,
+    isNew: !!isNew,
+  };
+};
+
+const normalizeOffer = (o = {}) => {
+  const isActive = o.is_active ?? o.isActive ?? o.active ?? true;
+  const linkedCategory = o.linked_category ?? o.targetCategory ?? o.category ?? "";
+  const linkedProduct = o.linked_product_id ?? o.targetProduct ?? null;
+  const discountPercentage = Number(o.discount_percentage ?? o.discountPercent ?? 0) || 0;
+  const bannerImage = o.banner_image ?? o.image ?? "";
+
+  return {
+    ...o,
+    id: o._id || o.id,
+    banner_image: bannerImage,
+    image: bannerImage,
+    linked_product_id: linkedProduct,
+    targetProduct: linkedProduct,
+    linked_category: linkedCategory,
+    targetCategory: linkedCategory,
+    category: linkedCategory,
+    discount_percentage: discountPercentage,
+    discountPercent: discountPercentage,
+    is_active: !!isActive,
+    isActive: !!isActive,
+    active: !!isActive,
+    priority: Number(o.priority || 0),
+  };
+};
+
+const normalizeCategory = (c = {}) => {
+  const isActive = c.is_active ?? c.isActive ?? c.active ?? true;
+  return {
+    ...c,
+    id: c._id || c.id,
+    name: c.name || c.label || "",
+    image: c.image || c.icon || "",
+    is_active: !!isActive,
+    isActive: !!isActive,
+    active: !!isActive,
+    label: c.name || c.label || "",
+    icon: c.image || c.icon || "",
+  };
+};
 
 const ProductContext = createContext(null);
 const RECENTLY_VIEWED_KEY = "recently_viewed_products";
@@ -102,28 +159,20 @@ export const ProductProvider = ({ children }) => {
 
       if (prodRes.status === "fulfilled") {
         const data = prodRes.value;
-        setProducts(data.products || data.data || data || []);
+        const rows = data.products || data.data || data || [];
+        setProducts((rows || []).map(normalizeProduct));
       }
       if (catRes.status === "fulfilled") {
         const data = catRes.value;
-        setCategories(data.categories || data.data || data || []);
+        const rows = data.categories || data.data || data || [];
+        setCategories((rows || []).map(normalizeCategory));
       }
       if (offerRes.status === "fulfilled") {
         const data = offerRes.value;
         const fetched = data.offers || data.data || data || [];
-        const merged = fetched.map((o, i) => ({
-          ...FALLBACK_OFFERS[i % FALLBACK_OFFERS.length],
-          ...o,
-          id: o._id || o.id,
-          description: o.description || o.subtitle || "",
-          active: o.isActive !== undefined ? o.isActive : o.active,
-          offerType: o.offerType || (o.targetProduct ? "product" : o.targetCategory || o.category ? "category" : "banner"),
-          targetCategory: o.targetCategory || o.category || "",
-          priority: Number(o.priority || 0),
-        }));
-        setOffers(merged.length ? merged : FALLBACK_OFFERS);
+        setOffers((fetched || []).map(normalizeOffer));
       } else {
-        setOffers(FALLBACK_OFFERS);
+        setOffers([]);
       }
     } catch (err) {
       setError(err.message);
@@ -135,14 +184,14 @@ export const ProductProvider = ({ children }) => {
   // ── Product CRUD ──────────────────────────────────────────────────
   const addProduct = async (product) => {
     const data = await api.post("/api/products", product, token());
-    const newProduct = data.product || data;
+    const newProduct = normalizeProduct(data.product || data);
     setProducts((prev) => [newProduct, ...prev]);
     return newProduct;
   };
 
   const updateProduct = async (id, updates) => {
     const data = await api.put(`/api/products/${id}`, updates, token());
-    const updated = data.product || data;
+    const updated = normalizeProduct(data.product || data);
     setProducts((prev) => prev.map((p) => (p._id || p.id) === id ? updated : p));
     return updated;
   };
@@ -155,36 +204,36 @@ export const ProductProvider = ({ children }) => {
   const toggleStock = async (id) => {
     const data = await api.patch(`/api/products/${id}/stock`, {}, token());
     const updated = data.product || data;
-    setProducts((prev) => prev.map((p) => (p._id || p.id) === id ? { ...p, ...updated } : p));
+    setProducts((prev) => prev.map((p) => (p._id || p.id) === id ? normalizeProduct({ ...p, ...updated }) : p));
   };
 
   const toggleFeatured = async (id) => {
     const data = await api.patch(`/api/products/${id}/featured`, {}, token());
-    setProducts((prev) => prev.map((p) => (p._id || p.id) === id ? { ...p, featured: data.featured } : p));
+    setProducts((prev) => prev.map((p) => (p._id || p.id) === id ? normalizeProduct({ ...p, is_featured: data.is_featured ?? data.featured }) : p));
   };
 
   const toggleBestseller = async (id) => {
     const data = await api.patch(`/api/products/${id}/bestseller`, {}, token());
-    setProducts((prev) => prev.map((p) => (p._id || p.id) === id ? { ...p, bestseller: data.bestseller } : p));
+    setProducts((prev) => prev.map((p) => (p._id || p.id) === id ? normalizeProduct({ ...p, is_bestseller: data.is_bestseller ?? data.bestseller }) : p));
   };
 
   const toggleIsNew = async (id) => {
     const data = await api.patch(`/api/products/${id}/isnew`, {}, token());
-    setProducts((prev) => prev.map((p) => (p._id || p.id) === id ? { ...p, isNew: data.isNew } : p));
+    setProducts((prev) => prev.map((p) => (p._id || p.id) === id ? normalizeProduct({ ...p, is_new: data.is_new ?? data.isNew }) : p));
   };
 
   // ── Offer CRUD ────────────────────────────────────────────────────
   const addOffer = async (offer) => {
     const data = await api.post("/api/offers", offer, token());
-    const newOffer = { ...FALLBACK_OFFERS[offers.length % FALLBACK_OFFERS.length], ...(data.offer || data), id: (data.offer || data)._id };
+    const newOffer = normalizeOffer(data.offer || data);
     setOffers((prev) => [...prev, newOffer]);
     return newOffer;
   };
 
   const updateOffer = async (id, updates) => {
     const data = await api.put(`/api/offers/${id}`, updates, token());
-    const updated = data.offer || data;
-    setOffers((prev) => prev.map((o) => (o._id || o.id) === id ? { ...o, ...updated } : o));
+    const updated = normalizeOffer(data.offer || data);
+    setOffers((prev) => prev.map((o) => (o._id || o.id) === id ? updated : o));
   };
 
   const deleteOffer = async (id) => {
@@ -195,26 +244,37 @@ export const ProductProvider = ({ children }) => {
   const toggleOffer = async (id) => {
     const data = await api.patch(`/api/offers/${id}/toggle`, {}, token());
     const updated = data.offer || data;
-    setOffers((prev) => prev.map((o) => (o._id || o.id) === id ? { ...o, ...updated } : o));
+    setOffers((prev) => prev.map((o) => (o._id || o.id) === id ? normalizeOffer({ ...o, ...updated }) : o));
   };
 
   // ── Category CRUD ─────────────────────────────────────────────────
   const addCategory = async (category) => {
     const data = await api.post("/api/categories", category, token());
-    const newCat = data.category || data;
+    const newCat = normalizeCategory(data.category || data);
     setCategories((prev) => [...prev, newCat]);
     return newCat;
   };
 
   const updateCategory = async (id, updates) => {
     const data = await api.put(`/api/categories/${id}`, updates, token());
-    const updated = data.category || data;
-    setCategories((prev) => prev.map((c) => c.id === id ? updated : c));
+    const updated = normalizeCategory(data.category || data);
+    setCategories((prev) => prev.map((c) => (c._id || c.id) === id ? updated : c));
+  };
+
+  const toggleCategory = async (id) => {
+    const data = await api.patch(`/api/categories/${id}/toggle`, {}, token());
+    setCategories((prev) =>
+      prev.map((c) =>
+        (c._id || c.id) === id
+          ? normalizeCategory({ ...c, is_active: data.is_active ?? data.isActive ?? data.active })
+          : c
+      )
+    );
   };
 
   const deleteCategory = async (id) => {
     await api.delete(`/api/categories/${id}`, token());
-    setCategories((prev) => prev.filter((c) => c.id !== id));
+    setCategories((prev) => prev.filter((c) => (c._id || c.id) !== id));
   };
 
   // ── Orders ────────────────────────────────────────────────────────
@@ -378,7 +438,7 @@ export const ProductProvider = ({ children }) => {
     addProduct, updateProduct, deleteProduct, toggleStock,
     toggleFeatured, toggleBestseller, toggleIsNew,
     addOffer, updateOffer, deleteOffer, toggleOffer,
-    addCategory, updateCategory, deleteCategory,
+    addCategory, updateCategory, deleteCategory, toggleCategory,
     markProductViewed, clearRecentlyViewed, toggleWishlist,
     fetchOrders, placeOrder, markOrderDelivered, markOrderPaid, submitUpiTxnId, addIncomingOrder,
   }), [

@@ -57,7 +57,7 @@ const Products = () => {
             {categoryName && !urlSearch && (
               <>
                 <ChevronRight className="w-3 h-3 text-slate-300" />
-                <span className="text-slate-700 font-semibold truncate max-w-[120px] sm:max-w-none">{categoryName}</span>
+                <span className="text-slate-700 font-semibold truncate max-w-30 sm:max-w-none">{categoryName}</span>
               </>
             )}
             {urlSearch && (

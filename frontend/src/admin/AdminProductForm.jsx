@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Save, UploadCloud, Image as ImageIcon, Tag, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Save, UploadCloud, Image as ImageIcon, Tag, AlertCircle, CheckCircle2, X } from "lucide-react";
 import { useProducts } from "../context/ProductContext";
+import { api } from "../utils/api";
 
 const EMPTY_FORM = {
   name: "", category: "", price: "", mrp: "",
-  description: "", image: "", inStock: true,
+  description: "", image: "", images: [], inStock: true,
   featured: false, bestseller: false, isNew: false, brand: "", stock: "", tags: "",
 };
 
@@ -36,7 +37,8 @@ const AdminProductForm = ({ mode = "add" }) => {
           price:       product.price       || "",
           mrp:         product.mrp || product.originalPrice || "",
           description: product.description || "",
-          image:       product.image       || "",
+          image:       product.image || product.images?.[0] || "",
+          images:      product.images?.length ? product.images : (product.image ? [product.image] : []),
           inStock:     product.inStock     ?? true,
           featured:    product.featured    ?? false,
           bestseller:  product.bestseller  ?? false,
@@ -63,27 +65,39 @@ const AdminProductForm = ({ mode = "add" }) => {
     return e;
   };
 
-  async function handleImageUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) { setUploadError("Please select a valid image file."); return; }
-    if (file.size > 5 * 1024 * 1024)    { setUploadError("Image must be under 5MB.");           return; }
+  async function uploadFiles(fileList) {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+
+    const invalid = files.find((file) => !file.type.startsWith("image/") || file.size > 5 * 1024 * 1024);
+    if (invalid) {
+      setUploadError("Only image files under 5MB are allowed.");
+      return;
+    }
 
     setUploadError("");
     setUploading(true);
     setUploadProgress(0);
 
-    const interval = setInterval(() => setUploadProgress((p) => (p < 85 ? p + 10 : p)), 200);
+    const step = Math.max(5, Math.floor(90 / files.length));
+    const interval = setInterval(() => setUploadProgress((p) => (p < 90 ? p + step : p)), 220);
     try {
       const formData = new FormData();
-      formData.append("image", file);
-      const res  = await fetch(
-        `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/upload`,
-        { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData }
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Upload failed");
-      set("image", data.url);
+      files.forEach((file) => formData.append("images", file));
+
+      const data = await api.upload("/api/upload/multiple", formData, token);
+      const uploadedUrls = (data.images || []).map((img) => img.url).filter(Boolean);
+
+      if (!uploadedUrls.length) throw new Error("Upload failed");
+
+      setForm((prev) => {
+        const merged = [...(prev.images || []), ...uploadedUrls].filter(Boolean);
+        return {
+          ...prev,
+          images: merged,
+          image: merged[0] || "",
+        };
+      });
       setUploadProgress(100);
     } catch (err) {
       setUploadError("Upload failed: " + err.message);
@@ -92,6 +106,36 @@ const AdminProductForm = ({ mode = "add" }) => {
       setUploading(false);
     }
   }
+
+  async function handleImageUpload(e) {
+    await uploadFiles(e.target.files);
+    e.target.value = "";
+  }
+
+  const removeImageAt = (index) => {
+    setForm((prev) => {
+      const nextImages = (prev.images || []).filter((_, i) => i !== index);
+      return {
+        ...prev,
+        images: nextImages,
+        image: nextImages[0] || "",
+      };
+    });
+  };
+
+  const setPrimaryImage = (index) => {
+    setForm((prev) => {
+      const imgs = [...(prev.images || [])];
+      if (!imgs[index]) return prev;
+      const [primary] = imgs.splice(index, 1);
+      const nextImages = [primary, ...imgs];
+      return {
+        ...prev,
+        images: nextImages,
+        image: primary,
+      };
+    });
+  };
 
   const handleSubmit = async () => {
     const e = validate();
@@ -104,6 +148,8 @@ const AdminProductForm = ({ mode = "add" }) => {
       originalPrice: +form.mrp || +form.price,
       stock:         +form.stock || 0,
       tags:          (form.tags || "").split(",").map((t) => t.trim()).filter(Boolean),
+      image:         (form.images || [])[0] || "",
+      images:        form.images || [],
       inStock:  form.inStock,
       featured:    form.featured,
       bestseller:  form.bestseller,
@@ -160,32 +206,56 @@ const AdminProductForm = ({ mode = "add" }) => {
       </div>
 
       {/* ── Main Form Card ── */}
-      <div className="bg-white rounded-[1.5rem] border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6 relative overflow-hidden">
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6 relative overflow-hidden">
 
         {errors.submit && (
           <div className="bg-rose-50 border border-rose-200 text-rose-700 rounded-xl px-4 py-3 text-sm font-bold flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <AlertCircle className="w-4 h-4 shrink-0" />
             {errors.submit}
           </div>
         )}
 
         {/* ── Image Upload ── */}
         <div>
-          <label className="block text-[13px] font-bold text-slate-700 mb-2">Product Image</label>
+          <label className="block text-[13px] font-bold text-slate-700 mb-2">Product Images</label>
           
-          {form.image && form.image.startsWith("http") ? (
-            <div className="relative w-full h-56 sm:h-64 rounded-2xl overflow-hidden border border-slate-200 group bg-slate-50">
-              <img src={form.image} alt="Preview" className="w-full h-full object-contain mix-blend-multiply" />
-              <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-sm">
-                <label className="cursor-pointer bg-white text-slate-900 text-sm font-bold px-5 py-2.5 rounded-xl hover:scale-105 transition-transform shadow-lg">
-                  Change Image
-                  <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                </label>
-                <button type="button" onClick={() => set("image", "")}
-                  className="bg-rose-500 text-white text-sm font-bold px-5 py-2.5 rounded-xl hover:bg-rose-600 hover:scale-105 transition-transform shadow-lg">
-                  Remove
-                </button>
+          {!!(form.images || []).length ? (
+            <div className="space-y-3">
+              <div className="relative w-full h-56 sm:h-64 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50">
+                <img src={form.images[0]} alt="Primary preview" className="w-full h-full object-contain mix-blend-multiply" />
+                <div className="absolute top-3 left-3 bg-blue-600 text-white text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider">Primary</div>
               </div>
+
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                {(form.images || []).map((img, index) => (
+                  <div key={`${img}-${index}`} className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-50 group">
+                    <img src={img} alt={`Preview ${index + 1}`} className="w-full h-20 object-cover" />
+                    <div className="absolute inset-0 bg-slate-900/55 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 px-1">
+                      {index !== 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setPrimaryImage(index)}
+                          className="text-[10px] font-bold px-2 py-1 rounded-md bg-white text-slate-800"
+                        >
+                          Primary
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeImageAt(index)}
+                        className="text-[10px] font-bold px-2 py-1 rounded-md bg-rose-500 text-white"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <label className="cursor-pointer inline-flex items-center gap-2 border border-slate-300 hover:border-blue-400 rounded-xl px-4 py-2.5 bg-white text-slate-700 text-sm font-semibold">
+                <UploadCloud className="w-4 h-4" /> Add More Images
+                <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} disabled={uploading} />
+              </label>
             </div>
           ) : (
             <label className="cursor-pointer block group">
@@ -206,12 +276,12 @@ const AdminProductForm = ({ mode = "add" }) => {
                     <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-200 mb-3 group-hover:scale-110 transition-transform duration-300">
                       <UploadCloud className="w-6 h-6 text-slate-400 group-hover:text-blue-500 transition-colors" />
                     </div>
-                    <div className="text-sm font-bold text-slate-700">Click to upload image</div>
-                    <div className="text-xs font-medium text-slate-400 mt-1">High quality JPG, PNG, WEBP — max 5MB</div>
+                    <div className="text-sm font-bold text-slate-700">Click to upload product images</div>
+                    <div className="text-xs font-medium text-slate-400 mt-1">Upload multiple JPG, PNG, WEBP files (max 5MB each)</div>
                   </div>
                 )}
               </div>
-              <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
+              <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} disabled={uploading} />
             </label>
           )}
           {uploadError && <p className="text-[11px] font-bold text-rose-500 mt-2 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {uploadError}</p>}
@@ -294,7 +364,7 @@ const AdminProductForm = ({ mode = "add" }) => {
               </div>
               <label className="relative inline-flex items-center cursor-pointer ml-auto">
                 <input type="checkbox" className="sr-only peer" checked={form[key]} onChange={() => set(key, !form[key])} />
-                <div className={`w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${color}`}></div>
+                <div className={`w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${color}`}></div>
               </label>
             </div>
           ))}

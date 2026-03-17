@@ -60,7 +60,7 @@ const Hero = memo(() => {
                 />
                 <button
                   type="submit"
-                  className="bg-blue-600 text-white px-4 sm:px-8 py-2.5 sm:py-3.5 rounded-full text-sm font-bold hover:bg-blue-700 transition-colors duration-200 shadow-md flex-shrink-0 active:scale-95"
+                  className="bg-blue-600 text-white px-4 sm:px-8 py-2.5 sm:py-3.5 rounded-full text-sm font-bold hover:bg-blue-700 transition-colors duration-200 shadow-md shrink-0 active:scale-95"
                 >
                   Search
                 </button>
@@ -107,12 +107,12 @@ const Hero = memo(() => {
           {/* ── Right Content (Hero Featured Card) ── */}
           <div className="relative lg:mt-0 flex justify-center items-center px-2 sm:px-4 lg:px-0">
             {/* Soft backdrop blur for the card to sit on */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-blue-100/50 to-transparent rounded-full blur-3xl scale-90"></div>
+            <div className="absolute inset-0 bg-linear-to-tr from-blue-100/50 to-transparent rounded-full blur-3xl scale-90"></div>
             
-            <div className="relative bg-white p-4 sm:p-5 rounded-[1.5rem] sm:rounded-[2rem] shadow-xl sm:shadow-2xl shadow-slate-200/80 border border-slate-100 hover:-translate-y-2 transition-transform duration-300 w-full max-w-[340px] sm:max-w-[400px] flex flex-col group">
+            <div className="relative bg-white p-4 sm:p-5 rounded-3xl sm:rounded-4xl shadow-xl sm:shadow-2xl shadow-slate-200/80 border border-slate-100 hover:-translate-y-2 transition-transform duration-300 w-full max-w-85 sm:max-w-100 flex flex-col group">
               
               {/* Image Area */}
-              <div className="relative bg-slate-50 overflow-hidden aspect-square rounded-[1.25rem] sm:rounded-[1.5rem] w-full flex-shrink-0 flex items-center justify-center mb-4 sm:mb-5">
+              <div className="relative bg-slate-50 overflow-hidden aspect-square rounded-[1.25rem] sm:rounded-3xl w-full shrink-0 flex items-center justify-center mb-4 sm:mb-5">
                 <div className="w-20 h-20 sm:w-28 sm:h-28 bg-blue-50 rounded-full flex items-center justify-center border-4 border-white shadow-sm group-hover:scale-110 transition-transform duration-500">
                   <span className="text-5xl sm:text-6xl drop-shadow-sm">🪔</span>
                 </div>

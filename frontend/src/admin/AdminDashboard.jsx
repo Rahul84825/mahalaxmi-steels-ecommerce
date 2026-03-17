@@ -14,7 +14,7 @@ const StatCard = ({ label, value, sub, icon: Icon, color, bg, onClick }) => (
                 ${onClick ? "cursor-pointer hover:shadow-lg hover:shadow-slate-200/50 hover:border-slate-300 hover:-translate-y-0.5" : ""}`}
   >
     <div className="flex items-start justify-between mb-4">
-      <div className={`w-12 h-12 ${bg} rounded-[14px] flex items-center justify-center flex-shrink-0 ring-1 ring-black/5 transition-transform duration-300 ${onClick ? 'group-hover:scale-110' : ''}`}>
+      <div className={`w-12 h-12 ${bg} rounded-[14px] flex items-center justify-center shrink-0 ring-1 ring-black/5 transition-transform duration-300 ${onClick ? 'group-hover:scale-110' : ''}`}>
         <Icon className={`w-5 h-5 ${color}`} />
       </div>
       {onClick && (
@@ -65,8 +65,7 @@ const AdminDashboard = () => {
     if (typeof cat === "object") return cat.name || cat.label || "Unknown";
     const found = categories.find((c) => c._id === cat || c.id === cat || c.slug === cat);
     if (found) return found.name || found.label || "Unknown";
-    const SLUG_MAP = { steel: "Stainless Steel", copper: "Copper", brass: "Pital (Brass)", pooja: "Pooja Essentials", appliances: "Home Appliances" };
-    return SLUG_MAP[cat] || cat;
+    return String(cat);
   };
 
   // Group products by resolved category name
@@ -132,7 +131,7 @@ const AdminDashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-6">
         
         {/* ── Category Breakdown ── */}
-        <div className="bg-white rounded-[1.5rem] border border-slate-200 shadow-sm p-6 sm:p-8">
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8">
           <h3 className="text-base font-extrabold text-slate-900 mb-6 flex items-center gap-2">
             Products by Category
           </h3>
@@ -141,7 +140,7 @@ const AdminDashboard = () => {
               <div key={name} className="flex items-center gap-4 group">
                 <span className="text-xs font-bold text-slate-600 w-36 truncate group-hover:text-blue-600 transition-colors">{name}</span>
                 <div className="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full transition-all duration-1000 ease-out"
+                  <div className="bg-linear-to-r from-blue-500 to-blue-600 h-full rounded-full transition-all duration-1000 ease-out"
                     style={{ width: `${Math.max((count / totalProducts) * 100, 2)}%` }} />
                 </div>
                 <span className="text-xs font-black text-slate-800 w-8 text-right bg-slate-50 py-1 rounded-md border border-slate-100">{count}</span>
@@ -154,7 +153,7 @@ const AdminDashboard = () => {
         </div>
 
         {/* ── Mobile Quick Actions (Hidden on Desktop) ── */}
-        <div className="sm:hidden bg-white rounded-[1.5rem] border border-slate-200 shadow-sm p-6">
+        <div className="sm:hidden bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
           <h3 className="text-base font-extrabold text-slate-900 mb-4">Quick Actions</h3>
           <div className="flex flex-col gap-3">
             <button onClick={() => navigate("/admin/products/add")}

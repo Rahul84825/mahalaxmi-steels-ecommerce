@@ -57,6 +57,7 @@ const OfferModal = ({ offer, products, categories, onSave, onClose }) => {
   }));
   const [errors, setErrors] = useState({});
   const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const token = localStorage.getItem("token");
 
@@ -95,7 +96,7 @@ const OfferModal = ({ offer, products, categories, onSave, onClose }) => {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const e = validate();
     if (Object.keys(e).length) {
       setErrors(e);
@@ -111,8 +112,15 @@ const OfferModal = ({ offer, products, categories, onSave, onClose }) => {
       active: !!form.isActive,
     };
 
-    onSave(payload);
-    onClose();
+    setSaving(true);
+    try {
+      await onSave(payload);
+      onClose();
+    } catch (err) {
+      setErrors((prev) => ({ ...prev, submit: err.message || "Failed to save offer" }));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const inputClass = (hasError) =>
@@ -124,7 +132,7 @@ const OfferModal = ({ offer, products, categories, onSave, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4">
-      <div className="bg-white rounded-[1.5rem] shadow-2xl shadow-slate-900/20 w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 sm:p-8">
+      <div className="bg-white rounded-3xl shadow-2xl shadow-slate-900/20 w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 sm:p-8">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">
             {offer ? "Edit Offer" : "Create New Offer"}
@@ -233,7 +241,7 @@ const OfferModal = ({ offer, products, categories, onSave, onClose }) => {
                       set("bg", bg.value);
                       set("accent", bg.accent);
                     }}
-                    className={`w-9 h-9 rounded-full bg-gradient-to-br ${bg.value} transition-all ${selected ? "ring-2 ring-offset-2 ring-slate-400" : "opacity-80 hover:opacity-100"}`}
+                    className={`w-9 h-9 rounded-full bg-linear-to-br ${bg.value} transition-all ${selected ? "ring-2 ring-offset-2 ring-slate-400" : "opacity-80 hover:opacity-100"}`}
                     title={bg.label}
                   >
                     {selected ? <CheckCircle2 className="w-4 h-4 text-white mx-auto" /> : null}
@@ -250,14 +258,16 @@ const OfferModal = ({ offer, products, categories, onSave, onClose }) => {
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input type="checkbox" className="sr-only peer" checked={form.isActive} onChange={() => set("isActive", !form.isActive)} />
-              <div className="w-11 h-6 bg-slate-200 rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500" />
+              <div className="w-11 h-6 bg-slate-200 rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500" />
             </label>
           </div>
         </div>
 
-        <button onClick={handleSave} className="mt-8 w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-blue-600 text-white py-3.5 rounded-xl text-sm font-bold transition-all">
+        {errors.submit ? <p className="mt-4 text-xs font-bold text-rose-600">{errors.submit}</p> : null}
+
+        <button onClick={handleSave} disabled={saving} className="mt-8 w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-blue-600 disabled:opacity-60 text-white py-3.5 rounded-xl text-sm font-bold transition-all">
           <Save className="w-4 h-4" />
-          {offer ? "Save Changes" : "Publish Offer"}
+          {saving ? "Saving..." : offer ? "Save Changes" : "Publish Offer"}
         </button>
       </div>
     </div>
@@ -276,9 +286,9 @@ const AdminOffers = () => {
 
   const getId = (o) => o._id || o.id;
 
-  const handleSave = (form) => {
-    if (modal === "add") addOffer(form);
-    else updateOffer(getId(modal), form);
+  const handleSave = async (form) => {
+    if (modal === "add") return addOffer(form);
+    return updateOffer(getId(modal), form);
   };
 
   return (
@@ -299,7 +309,7 @@ const AdminOffers = () => {
           const active = offer.isActive !== undefined ? offer.isActive : offer.active;
           const discountLabel = offer.discount || (offer.discountPercent ? `${offer.discountPercent}% OFF` : "Special Offer");
           return (
-            <div key={id} className={`bg-gradient-to-br ${offer.bg || "from-blue-700 to-blue-900"} rounded-[1.5rem] p-6 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300 shadow-md hover:shadow-xl`}>
+            <div key={id} className={`bg-linear-to-br ${offer.bg || "from-blue-700 to-blue-900"} rounded-3xl p-6 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300 shadow-md hover:shadow-xl`}>
               <div className={`absolute -right-8 -bottom-8 w-40 h-40 ${offer.accent || "bg-blue-500"} rounded-full opacity-30 blur-2xl group-hover:scale-150 transition-transform duration-700`} />
 
               <div className="relative z-10 flex items-center justify-between mb-4">
@@ -315,7 +325,7 @@ const AdminOffers = () => {
 
               <div className="relative z-10 mb-5">
                 <h3 className="text-white font-extrabold text-xl leading-tight mb-1">{offer.title}</h3>
-                <p className="text-white/80 text-[13px] font-medium line-clamp-2 min-h-[36px]">{offer.description || offer.subtitle}</p>
+                <p className="text-white/80 text-[13px] font-medium line-clamp-2 min-h-9">{offer.description || offer.subtitle}</p>
                 <p className="text-white font-black text-3xl mt-3 tracking-tight">{discountLabel}</p>
               </div>
 
@@ -348,7 +358,7 @@ const AdminOffers = () => {
 
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-[1.5rem] shadow-2xl shadow-slate-900/20 p-6 sm:p-8 max-w-sm w-full text-center">
+          <div className="bg-white rounded-3xl shadow-2xl shadow-slate-900/20 p-6 sm:p-8 max-w-sm w-full text-center">
             <div className="w-14 h-14 bg-rose-50 border border-rose-100 rounded-full flex items-center justify-center mx-auto mb-5">
               <Trash2 className="w-6 h-6 text-rose-500" />
             </div>

@@ -23,6 +23,9 @@ const normalizeOfferPayload = (body = {}) => {
             ? !!body.active
             : true,
     priority: Number(body.priority ?? 0),
+    badge: body.badge ?? "",
+    bg: body.bg,
+    accent: body.accent,
   };
 };
 
@@ -56,6 +59,9 @@ const updateOffer  = asyncHandler(async (req, res) => {
     "linked_category",
     "is_active",
     "priority",
+    "badge",
+    "bg",
+    "accent",
   ];
 
   fields.forEach((f) => {
