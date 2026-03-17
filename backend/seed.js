@@ -96,7 +96,7 @@ const seed = async () => {
 
     console.log("\n✅ Database seeded successfully!");
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("Admin login → mahalxmisteels.com");
+    console.log("Admin login → mahalxmisteels08@gmail.com");
     console.log("Password   → Rahulbhai@123");
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
     process.exit(0);
