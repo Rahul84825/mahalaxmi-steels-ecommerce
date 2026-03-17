@@ -9,11 +9,11 @@ const Category = require("./models/Category");
 const Offer    = require("./models/Offer");
 
 const CATEGORIES = [
-  { id: "steel",      label: "Stainless Steel",  icon: "🥘", description: "Premium SS cookware & utensils" },
-  { id: "copper",     label: "Copper Utensils",  icon: "🏺", description: "Pure copper vessels & bottles"  },
-  { id: "brass",      label: "Pital (Brass)",    icon: "✨", description: "Traditional brass items"        },
-  { id: "pooja",      label: "Pooja Essentials", icon: "🪔", description: "Spiritual & puja items"         },
-  { id: "appliances", label: "Home Appliances",  icon: "🔌", description: "Kitchen & home appliances"      },
+  { name: "Stainless Steel",  image: "🥘", is_active: true, legacyKey: "steel" },
+  { name: "Copper Utensils",  image: "🏺", is_active: true, legacyKey: "copper" },
+  { name: "Pital (Brass)",    image: "✨", is_active: true, legacyKey: "brass" },
+  { name: "Pooja Essentials", image: "🪔", is_active: true, legacyKey: "pooja" },
+  { name: "Home Appliances",  image: "🔌", is_active: true, legacyKey: "appliances" },
 ];
 
 const PRODUCTS = [
@@ -62,12 +62,33 @@ const seed = async () => {
     console.log("👤 Admin user created → admin@mahalaxmisteels.com / Admin@123");
 
     // Seed categories, products, offers
-    await Category.insertMany(CATEGORIES);
+    const insertedCategories = await Category.insertMany(
+      CATEGORIES.map((c) => ({ name: c.name, image: c.image, is_active: c.is_active }))
+    );
     console.log(`📂 ${CATEGORIES.length} categories seeded`);
 
-    await Product.insertMany(
-      PRODUCTS.map(p => ({ ...p, rating: +(Math.random() * 2 + 3).toFixed(1), reviews: Math.floor(Math.random() * 200 + 10) }))
-    );
+    const categoryIdMap = insertedCategories.reduce((acc, cat) => {
+      const key = CATEGORIES.find((item) => item.name === cat.name)?.legacyKey;
+      if (key) acc[key] = cat._id;
+      return acc;
+    }, {});
+
+    const seededProducts = PRODUCTS.map((p) => {
+      const { category, ...rest } = p;
+      const resolvedCategoryId = categoryIdMap[category];
+      if (!resolvedCategoryId) {
+        throw new Error(`Missing category mapping for product \"${p.name}\" (category: ${category})`);
+      }
+
+      return {
+        ...rest,
+        category_id: resolvedCategoryId,
+        rating: +(Math.random() * 2 + 3).toFixed(1),
+        reviews: Math.floor(Math.random() * 200 + 10),
+      };
+    });
+
+    await Product.insertMany(seededProducts);
     console.log(`📦 ${PRODUCTS.length} products seeded`);
 
     await Offer.insertMany(OFFERS);
@@ -75,8 +96,8 @@ const seed = async () => {
 
     console.log("\n✅ Database seeded successfully!");
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("Admin login → admin@mahalaxmisteels.com");
-    console.log("Password   → Admin@123");
+    console.log("Admin login → mahalxmisteels.com");
+    console.log("Password   → Rahulbhai@123");
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
     process.exit(0);
   } catch (error) {
