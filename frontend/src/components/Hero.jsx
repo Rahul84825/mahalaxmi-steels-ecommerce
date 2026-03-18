@@ -16,7 +16,7 @@ const Hero = memo(() => {
   }, [searchQuery, navigate]);
 
   return (
-    <section className="relative bg-slate-50 overflow-hidden pt-8 pb-14 sm:pt-12 sm:pb-20 md:pt-20 md:pb-28">
+    <section className="relative bg-slate-50 overflow-hidden section-shell pt-8 sm:pt-12 md:pt-16">
       {/* ── Ambient Background Glows ── */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute -top-[20%] -right-[10%] w-[50%] h-[50%] bg-blue-400/20 rounded-full mix-blend-multiply filter blur-[120px]" />
@@ -34,12 +34,12 @@ const Hero = memo(() => {
               <span>Trusted by 10,000+ Happy Homes</span>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-slate-900 mb-4 sm:mb-6 leading-[1.15] tracking-tight">
+            <h1 className="text-[var(--text-display)] font-extrabold text-slate-900 mb-4 sm:mb-6 leading-[1.1] tracking-tight">
               Premium Quality <br className="hidden sm:block" />
               <span className="text-blue-600 bg-clip-text">Kitchen & Pooja Essentials</span>
             </h1>
 
-            <p className="text-base sm:text-lg text-slate-500 mb-8 sm:mb-10 max-w-xl leading-relaxed px-2 sm:px-0">
+            <p className="section-subtitle text-base sm:text-lg mb-8 sm:mb-10 max-w-xl px-2 sm:px-0">
               Discover our finest collection of durable stainless steel utensils,
               traditional copper idols, and reliable home appliances. Quality crafted for your everyday life.
             </p>
@@ -60,7 +60,7 @@ const Hero = memo(() => {
                 />
                 <button
                   type="submit"
-                  className="bg-blue-600 text-white px-4 sm:px-8 py-2.5 sm:py-3.5 rounded-full text-sm font-bold hover:bg-blue-700 transition-colors duration-200 shadow-md shrink-0 active:scale-95"
+                  className="btn-primary px-4 sm:px-8 py-2.5 sm:py-3.5 text-sm shrink-0"
                 >
                   Search
                 </button>
@@ -71,14 +71,14 @@ const Hero = memo(() => {
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto justify-center lg:justify-start mb-10 sm:mb-12 px-1 sm:px-0">
               <NavLink
                 to="/products"
-                className="bg-slate-900 text-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-full text-sm sm:text-base font-bold hover:bg-blue-600 hover:shadow-lg hover:shadow-blue-600/20 transition-all duration-200 flex items-center justify-center gap-2 group"
+                className="btn-primary px-6 sm:px-8 py-3.5 sm:py-4 text-sm sm:text-base flex items-center justify-center gap-2 group"
               >
                 Shop Now
                 <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
               </NavLink>
               <NavLink
                 to="/products"
-                className="bg-white text-slate-700 border border-slate-200 px-6 sm:px-8 py-3.5 sm:py-4 rounded-full text-sm sm:text-base font-bold hover:border-blue-600 hover:text-blue-600 hover:shadow-md transition-all duration-200 flex items-center justify-center"
+                className="btn-secondary px-6 sm:px-8 py-3.5 sm:py-4 text-sm sm:text-base flex items-center justify-center"
               >
                 View Catalog
               </NavLink>
@@ -153,7 +153,7 @@ const Hero = memo(() => {
                   </span>
                 </div>
 
-                <button className="w-full flex items-center justify-center gap-2 py-3 sm:py-3.5 bg-slate-900 text-white rounded-xl text-xs sm:text-sm font-bold hover:bg-blue-600 transition-colors duration-200 shadow-lg shadow-slate-900/10">
+                <button className="w-full flex items-center justify-center gap-2 py-3 sm:py-3.5 bg-slate-900 text-white rounded-xl text-xs sm:text-sm font-bold hover:bg-blue-700 hover:-translate-y-0.5 transition-all duration-200 shadow-lg shadow-slate-900/10">
                   <ShoppingCart className="w-4 h-4" /> Add to Cart
                 </button>
 

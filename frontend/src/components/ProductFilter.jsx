@@ -29,10 +29,10 @@ const FilterDropdown = ({ label, value, options, onChange }) => {
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-all duration-200 whitespace-nowrap
+        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all duration-200 whitespace-nowrap
           ${isActive
-            ? "bg-blue-600 text-white border-blue-600 shadow-md"
-            : "bg-white text-gray-700 border-gray-200 hover:border-blue-400 hover:text-blue-600"
+            ? "bg-blue-700 text-white border-blue-700 shadow-md shadow-blue-700/25"
+            : "bg-white text-gray-700 border-gray-200 hover:border-blue-400 hover:text-blue-700"
           }`}
       >
         <span>{selectedLabel}</span>
@@ -90,8 +90,8 @@ const ProductFilter = ({ filters, onChange, totalResults }) => {
     categoryOptions.find((c) => c.id === filters.category)?.label || filters.category;
 
   return (
-    <div className="bg-white border-b border-gray-200 sticky top-16 md:top-20 z-30">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
+    <div className="bg-white/95 backdrop-blur-sm border-b border-gray-200 sticky top-16 md:top-20 z-30">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
 
         {/* ── Single filter row ── */}
         <div className="flex items-center gap-2 flex-wrap">
@@ -104,7 +104,7 @@ const ProductFilter = ({ filters, onChange, totalResults }) => {
               value={filters.search || ""}
               onChange={(e) => onChange({ ...filters, search: e.target.value })}
               placeholder="Search within results..."
-              className="w-full pl-8 pr-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 focus:bg-white transition-colors"
+              className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 focus:bg-white transition-colors"
             />
           </label>
 
@@ -139,7 +139,7 @@ const ProductFilter = ({ filters, onChange, totalResults }) => {
           <button
             onClick={() => onChange({ ...filters, inStockOnly: !filters.inStockOnly })}
             title="In Stock Only"
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-all duration-150 whitespace-nowrap
+            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-sm font-semibold transition-all duration-150 whitespace-nowrap
               ${filters.inStockOnly
                 ? "bg-green-600 text-white border-green-600"
                 : "bg-white text-gray-600 border-gray-200 hover:border-green-400 hover:text-green-600"
@@ -153,7 +153,7 @@ const ProductFilter = ({ filters, onChange, totalResults }) => {
           <button
             onClick={() => onChange({ ...filters, wishlistOnly: !filters.wishlistOnly })}
             title="Wishlist Only"
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-all duration-150 whitespace-nowrap
+            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-sm font-semibold transition-all duration-150 whitespace-nowrap
               ${filters.wishlistOnly
                 ? "bg-rose-600 text-white border-rose-600"
                 : "bg-white text-gray-600 border-gray-200 hover:border-rose-300 hover:text-rose-600"
@@ -171,7 +171,7 @@ const ProductFilter = ({ filters, onChange, totalResults }) => {
             {hasActiveFilters && (
               <button
                 onClick={clearAll}
-                className="flex items-center gap-1 px-2.5 py-2 text-xs font-medium text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg border border-red-200 transition-all duration-150"
+                className="flex items-center gap-1 px-2.5 py-2 text-xs font-semibold text-red-500 hover:text-red-600 hover:bg-red-50 rounded-xl border border-red-200 transition-all duration-150"
               >
                 <X className="w-3 h-3" />
                 Clear

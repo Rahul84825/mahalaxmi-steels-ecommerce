@@ -41,11 +41,11 @@ const Products = () => {
   return (
     <main className="bg-slate-50 min-h-screen flex flex-col">
       {/* ── Page Header ── */}
-      <div className="bg-white border-b border-slate-200/80 pt-4 pb-5">
+      <div className="bg-white border-b border-slate-200/80 pt-3 pb-4 sm:pt-4 sm:pb-5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
           {/* Breadcrumbs */}
-          <nav className="flex items-center gap-1.5 text-xs text-slate-400 mb-3 font-medium" aria-label="Breadcrumb">
+          <nav className="flex items-center gap-1.5 text-xs text-slate-400 mb-2.5 font-medium" aria-label="Breadcrumb">
             <Link to="/" className="flex items-center gap-1 hover:text-blue-600 transition-colors">
               <Home className="w-3 h-3" />
               <span>Home</span>
@@ -69,21 +69,21 @@ const Products = () => {
           </nav>
 
           {/* Title row */}
-          <div className="flex items-baseline gap-3">
+          <div className="flex items-baseline gap-2.5 sm:gap-3">
             {urlSearch ? (
               <>
                 <SearchIcon className="w-5 h-5 text-blue-600 shrink-0 mb-0.5" />
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+                <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
                   Results for "<span className="text-blue-600">{urlSearch}</span>"
                 </h1>
               </>
             ) : (
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight capitalize">
+              <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight capitalize">
                 {urlCategory === "all" ? "All Products" : categoryName || "Products"}
               </h1>
             )}
             {productCount !== null && (
-              <span className="text-sm text-slate-400 font-medium shrink-0">{productCount} items</span>
+              <span className="text-sm text-slate-500 font-semibold shrink-0">{productCount} items</span>
             )}
           </div>
 

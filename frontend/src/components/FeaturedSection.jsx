@@ -3,24 +3,19 @@ import { useNavigate } from "react-router-dom";
 import ProductCard from "./ProductCard";
 import { useProducts } from "../context/ProductContext";
 
-const OFFER_GRADIENTS = [
-  "from-slate-900 via-slate-800 to-slate-700",
-  "from-blue-900 via-blue-800 to-cyan-700",
-  "from-orange-700 via-amber-600 to-yellow-500",
-  "from-emerald-800 via-emerald-700 to-teal-600",
-];
+const DEFAULT_OFFER_THEME_COLOR = "linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)";
 
 const SectionTitle = ({ eyebrow, title, subtitle, cta, onCta }) => (
   <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 sm:mb-10">
     <div>
-      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-blue-700 mb-2">{eyebrow}</p>
-      <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900">{title}</h2>
-      {subtitle && <p className="text-slate-500 mt-2 text-sm sm:text-base max-w-2xl">{subtitle}</p>}
+      <p className="eyebrow mb-2">{eyebrow}</p>
+      <h2 className="section-title">{title}</h2>
+      {subtitle && <p className="section-subtitle mt-2 max-w-2xl">{subtitle}</p>}
     </div>
     {cta ? (
       <button
         onClick={onCta}
-        className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-800 hover:text-blue-700 rounded-full text-sm font-bold transition-all"
+        className="btn-secondary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
       >
         {cta}
         <ArrowRight className="w-4 h-4" />
@@ -41,7 +36,11 @@ const OffersSection = () => {
 
   const resolveOfferUrl = (offer) => {
     const linkedProduct = offer.linked_product_id ?? offer.targetProduct;
-    const linkedCategory = offer.linked_category ?? offer.targetCategory ?? offer.category;
+    const linkedCategory =
+      offer.linked_category_id ??
+      offer.linked_category ??
+      offer.targetCategory ??
+      offer.category;
 
     if (linkedProduct) {
       const id = linkedProduct?._id || linkedProduct?.id || linkedProduct;
@@ -67,7 +66,7 @@ const OffersSection = () => {
   };
 
   return (
-    <section className="py-14 sm:py-16 bg-slate-100 border-y border-slate-200/70">
+    <section className="section-shell bg-slate-100 border-y border-slate-200/70">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionTitle
           eyebrow="Offers"
@@ -77,34 +76,35 @@ const OffersSection = () => {
           onCta={() => navigate("/products")}
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
           {activeOffers.map((offer, index) => {
             const image = resolveOfferImage(offer);
             const discount = Number(offer.discount_percentage ?? offer.discountPercent ?? 0);
             const isHero = index === 0;
-            const gradient = OFFER_GRADIENTS[index % OFFER_GRADIENTS.length];
+            const themeColor = offer.theme_color || offer.themeColor || offer.bg || DEFAULT_OFFER_THEME_COLOR;
 
             return (
               <article
                 key={offer._id || offer.id || index}
                 onClick={() => navigate(resolveOfferUrl(offer))}
-                className={`relative overflow-hidden rounded-3xl border border-white/30 shadow-lg cursor-pointer group transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl bg-linear-to-br ${gradient} ${isHero ? "lg:col-span-7 min-h-80" : "lg:col-span-5 min-h-55"}`}
+                className={`relative overflow-hidden rounded-[1.8rem] border border-white/25 shadow-lg cursor-pointer group transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl ${isHero ? "lg:col-span-7 min-h-84" : "lg:col-span-5 min-h-58"}`}
+                style={{ background: themeColor }}
               >
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.22),transparent_55%)]" />
                 <div className="absolute -bottom-12 -right-10 w-52 h-52 rounded-full bg-white/20 blur-3xl group-hover:scale-125 transition-transform duration-700" />
 
-                <div className="relative z-10 p-6 sm:p-7 h-full flex flex-col justify-between">
+                <div className="relative z-10 p-6 sm:p-8 h-full flex flex-col justify-between">
                   <div>
                     <p className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] bg-white/20 text-white border border-white/30">
                       <Sparkles className="w-3 h-3" /> Priority {Number(offer.priority || 0)}
                     </p>
-                    <h3 className={`text-white font-black tracking-tight mt-3 ${isHero ? "text-3xl sm:text-4xl" : "text-2xl"}`}>{offer.title}</h3>
-                    {!!offer.description && <p className="text-white/85 mt-2 text-sm max-w-xl line-clamp-2">{offer.description}</p>}
+                    <h3 className={`text-white font-black tracking-tight mt-3 leading-tight ${isHero ? "text-3xl sm:text-4xl" : "text-2xl sm:text-[1.75rem]"}`}>{offer.title}</h3>
+                    {!!offer.description && <p className="text-white/85 mt-2 text-sm sm:text-base max-w-xl line-clamp-2">{offer.description}</p>}
                   </div>
 
                   <div className="flex items-end justify-between gap-3 mt-6">
                     <p className="text-4xl sm:text-5xl font-black text-white tracking-tight">{discount > 0 ? `${discount}% OFF` : "Special Offer"}</p>
-                    <span className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold px-4 py-2 rounded-full bg-white text-slate-900 group-hover:bg-blue-50">
+                    <span className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold px-4 py-2 rounded-full bg-white text-slate-900 group-hover:bg-orange-50 group-hover:text-orange-700">
                       Shop Now <ArrowRight className="w-4 h-4" />
                     </span>
                   </div>
@@ -138,7 +138,7 @@ const DynamicFeaturedProducts = () => {
   if (!list.length) return null;
 
   return (
-    <section className="py-14 sm:py-16 bg-white">
+    <section className="section-shell bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionTitle
           eyebrow="Latest Picks"
@@ -154,7 +154,7 @@ const DynamicFeaturedProducts = () => {
           ))}
         </div>
 
-        <div className="mt-8 inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-800 text-sm font-semibold">
+        <div className="mt-9 inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-800 text-sm font-semibold">
           <TrendingUp className="w-4 h-4" />
           Automatically sorted by newest products
         </div>

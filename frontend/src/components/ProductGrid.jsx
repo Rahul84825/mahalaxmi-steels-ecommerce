@@ -43,7 +43,7 @@ const EmptyState = ({ onClear, isSearch, query }) => (
       </p>
       <button 
         onClick={onClear}
-        className="inline-flex items-center gap-2 px-8 py-3.5 bg-blue-600 text-white rounded-full text-sm font-bold hover:bg-blue-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
+        className="btn-primary inline-flex items-center gap-2 px-8 py-3.5 text-sm"
       >
         {isSearch ? "Browse All Products" : (
           <>
@@ -125,7 +125,7 @@ const ProductGrid = ({ initialFilters, onCountChange }) => {
         totalResults={loading ? undefined : filteredProducts.length}
       />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-7 sm:py-9">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 sm:gap-6 lg:gap-8">
           {loading
             ? Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)

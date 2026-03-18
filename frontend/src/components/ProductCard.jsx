@@ -46,7 +46,7 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
   return (
     <div
       onClick={() => navigate(`/products/${productId}`)}
-      className="bg-white rounded-[1.4rem] border border-slate-100 overflow-hidden group cursor-pointer hover:border-slate-200 hover:shadow-xl hover:shadow-slate-200/60 hover:-translate-y-1 transition-all duration-300 flex flex-col relative"
+      className="interactive-card overflow-hidden group cursor-pointer flex flex-col relative"
     >
       <div className="relative bg-slate-50 overflow-hidden aspect-square w-full shrink-0">
         {hasRealImage ? (
@@ -104,12 +104,12 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
 
       <div className={`${cardPadding} flex flex-col flex-1`}>
         {categoryLabel && (
-          <p className="text-[10px] font-extrabold text-blue-700 uppercase tracking-widest mb-2">
+          <p className="text-[10px] font-extrabold text-blue-800 uppercase tracking-[0.18em] mb-2.5">
             {categoryLabel}
           </p>
         )}
         
-        <h3 className="text-base font-bold text-slate-900 leading-snug line-clamp-2 mb-3 group-hover:text-blue-600 transition-colors">
+        <h3 className="text-[15px] sm:text-base font-extrabold text-slate-900 leading-snug line-clamp-2 mb-2.5 group-hover:text-blue-700 transition-colors">
           {product.name}
         </h3>
 
@@ -130,7 +130,7 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
         )}
 
         <div className={`flex flex-wrap items-end gap-2 mt-auto ${compact ? "mb-4" : "mb-5"}`}>
-          <span className="text-xl font-black text-slate-900 tracking-tight">
+          <span className="price-main text-xl sm:text-[1.35rem]">
             ₹{product.price.toLocaleString("en-IN")}
           </span>
           {mrp > product.price && (
@@ -148,11 +148,11 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
         <button
           onClick={handleAddToCart}
           disabled={!product.inStock}
-          className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all duration-300
+          className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold transition-all duration-300
             ${addedToCart 
               ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 scale-[0.98]"
               : product.inStock 
-                ? "bg-slate-900 text-white hover:bg-blue-600 hover:shadow-lg hover:shadow-blue-600/20 active:scale-95"
+                ? "bg-slate-900 text-white hover:bg-blue-700 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-900/20 active:scale-95"
                 : "bg-slate-100 text-slate-400 cursor-not-allowed"
             }`}
         >

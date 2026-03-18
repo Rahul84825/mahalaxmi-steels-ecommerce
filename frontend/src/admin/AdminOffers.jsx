@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   PlusCircle,
   Pencil,
@@ -6,12 +6,12 @@ import {
   X,
   Save,
   AlertCircle,
-  CheckCircle2,
   Image as ImageIcon,
   UploadCloud,
 } from "lucide-react";
 import { useProducts } from "../context/ProductContext";
 import { api } from "../utils/api";
+import { DEFAULT_OFFER_THEME_COLOR, OFFER_THEME_OPTIONS } from "../constants/offerThemes";
 
 const OFFER_TYPES = [
   { id: "banner", label: "Banner Promotion" },
@@ -19,29 +19,17 @@ const OFFER_TYPES = [
   { id: "product", label: "Product Offer" },
 ];
 
-const BG_OPTIONS = [
-  { label: "Slate", value: "from-slate-700 to-slate-900", accent: "bg-slate-500" },
-  { label: "Blue", value: "from-blue-600 to-blue-800", accent: "bg-blue-500" },
-  { label: "Emerald", value: "from-emerald-500 to-emerald-700", accent: "bg-emerald-400" },
-  { label: "Orange", value: "from-orange-500 to-orange-700", accent: "bg-orange-400" },
-  { label: "Rose", value: "from-rose-500 to-rose-700", accent: "bg-rose-400" },
-];
-
 const EMPTY_OFFER = {
   title: "",
   description: "",
-  badge: "",
   discountPercent: 0,
-  discount: "",
   image: "",
   offerType: "banner",
   targetProduct: "",
   targetCategory: "",
   priority: 0,
   isActive: true,
-  icon: "🎁",
-  bg: "from-blue-600 to-blue-800",
-  accent: "bg-blue-500",
+  themeColor: DEFAULT_OFFER_THEME_COLOR,
 };
 
 const OfferModal = ({ offer, products, categories, onSave, onClose }) => {
@@ -49,11 +37,24 @@ const OfferModal = ({ offer, products, categories, onSave, onClose }) => {
     ...EMPTY_OFFER,
     ...(offer || {}),
     id: offer?._id || offer?.id,
-    targetProduct: offer?.targetProduct?._id || offer?.targetProduct || "",
-    targetCategory: offer?.targetCategory || offer?.category || "",
+    offerType: offer?.offerType || offer?.offer_type || EMPTY_OFFER.offerType,
+    targetProduct:
+      offer?.targetProduct?._id ||
+      offer?.targetProduct ||
+      offer?.linked_product_id?._id ||
+      offer?.linked_product_id ||
+      "",
+    targetCategory:
+      offer?.targetCategory?._id ||
+      offer?.targetCategory ||
+      offer?.linked_category_id?._id ||
+      offer?.linked_category_id ||
+      offer?.category ||
+      "",
     discountPercent: Number(offer?.discountPercent || 0),
     priority: Number(offer?.priority || 0),
     isActive: offer?.isActive !== undefined ? !!offer.isActive : offer?.active !== false,
+    themeColor: offer?.themeColor || offer?.theme_color || offer?.bg || DEFAULT_OFFER_THEME_COLOR,
   }));
   const [errors, setErrors] = useState({});
   const [uploading, setUploading] = useState(false);
@@ -66,9 +67,27 @@ const OfferModal = ({ offer, products, categories, onSave, onClose }) => {
     setErrors((prev) => ({ ...prev, [k]: "" }));
   };
 
+  useEffect(() => {
+    setForm((prev) => {
+      if (prev.offerType === "product" && prev.targetCategory) {
+        return { ...prev, targetCategory: "" };
+      }
+      if (prev.offerType === "category" && prev.targetProduct) {
+        return { ...prev, targetProduct: "" };
+      }
+      if (prev.offerType === "banner" && (prev.targetProduct || prev.targetCategory)) {
+        return { ...prev, targetProduct: "", targetCategory: "" };
+      }
+      return prev;
+    });
+  }, [form.offerType]);
+
   const validate = () => {
     const e = {};
     if (!(form.title || "").trim()) e.title = "Title is required";
+    if ((form.title || "").trim().length > 0 && (form.title || "").trim().length < 4) {
+      e.title = "Title must be at least 4 characters";
+    }
     if (form.discountPercent < 0 || form.discountPercent > 100) e.discountPercent = "Discount must be between 0 and 100";
     if (form.offerType === "product" && !form.targetProduct) e.targetProduct = "Select a product";
     if (form.offerType === "category" && !form.targetCategory) e.targetCategory = "Select a category";
@@ -104,12 +123,16 @@ const OfferModal = ({ offer, products, categories, onSave, onClose }) => {
     }
 
     const payload = {
-      ...form,
-      discountPercent: Number(form.discountPercent || 0),
-      discount: form.discount || `${Number(form.discountPercent || 0)}% OFF`,
+      title: (form.title || "").trim(),
+      description: form.description || "",
+      image: form.image || "",
+      discount_percentage: Number(form.discountPercent || 0),
+      offer_type: form.offerType,
+      linked_product_id: form.offerType === "product" ? form.targetProduct : null,
+      linked_category_id: form.offerType === "category" ? form.targetCategory : null,
+      theme_color: form.themeColor || DEFAULT_OFFER_THEME_COLOR,
       priority: Number(form.priority || 0),
-      category: form.targetCategory || "",
-      active: !!form.isActive,
+      is_active: !!form.isActive,
     };
 
     setSaving(true);
@@ -175,11 +198,6 @@ const OfferModal = ({ offer, products, categories, onSave, onClose }) => {
               {errors.discountPercent && <p className="text-[11px] font-bold text-rose-500 mt-1.5">{errors.discountPercent}</p>}
             </div>
 
-            <div>
-              <label className="block text-[13px] font-bold text-slate-700 mb-1.5">Badge</label>
-              <input value={form.badge} onChange={(e) => set("badge", e.target.value)} className={inputClass(errors.badge)} placeholder="Limited Time" />
-            </div>
-
             {form.offerType === "product" && (
               <div className="sm:col-span-2">
                 <label className="block text-[13px] font-bold text-slate-700 mb-1.5">Linked Product</label>
@@ -232,19 +250,19 @@ const OfferModal = ({ offer, products, categories, onSave, onClose }) => {
           <div className="pt-2">
             <label className="block text-[13px] font-bold text-slate-700 mb-2">Card Theme</label>
             <div className="flex flex-wrap gap-2">
-              {BG_OPTIONS.map((bg) => {
-                const selected = form.bg === bg.value;
+              {OFFER_THEME_OPTIONS.map((theme) => {
+                const selected = form.themeColor === theme.value;
                 return (
                   <button
-                    key={bg.value}
+                    key={theme.id}
                     onClick={() => {
-                      set("bg", bg.value);
-                      set("accent", bg.accent);
+                      set("themeColor", theme.value);
                     }}
-                    className={`w-9 h-9 rounded-full bg-linear-to-br ${bg.value} transition-all ${selected ? "ring-2 ring-offset-2 ring-slate-400" : "opacity-80 hover:opacity-100"}`}
-                    title={bg.label}
+                    className={`w-9 h-9 rounded-full transition-all ${selected ? "ring-2 ring-offset-2 ring-slate-400" : "opacity-80 hover:opacity-100"}`}
+                    style={{ background: theme.value }}
+                    title={theme.label}
                   >
-                    {selected ? <CheckCircle2 className="w-4 h-4 text-white mx-auto" /> : null}
+                    {selected ? <span className="block w-2.5 h-2.5 rounded-full bg-white mx-auto" /> : null}
                   </button>
                 );
               })}
@@ -280,6 +298,7 @@ const AdminOffers = () => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [status, setStatus] = useState({ type: "", message: "" });
   const [deleting, setDeleting] = useState(false);
+  const [togglingId, setTogglingId] = useState("");
 
   const sortedOffers = useMemo(
     () => [...offers].sort((a, b) => Number(b.priority || 0) - Number(a.priority || 0)),
@@ -323,6 +342,19 @@ const AdminOffers = () => {
     }
   };
 
+  const handleToggle = async (id) => {
+    setTogglingId(id);
+    try {
+      await toggleOffer(id);
+      await refresh();
+    } catch (err) {
+      console.error("Offer toggle failed", err);
+      setStatus({ type: "error", message: err.message || "Failed to toggle offer status." });
+    } finally {
+      setTogglingId("");
+    }
+  };
+
   return (
     <div className="animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
@@ -350,15 +382,21 @@ const AdminOffers = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
         {sortedOffers.map((offer) => {
           const id = getId(offer);
+          const offerType = offer.offer_type || offer.offerType || "banner";
+          const themeColor = offer.theme_color || offer.themeColor || DEFAULT_OFFER_THEME_COLOR;
           const active = offer.isActive !== undefined ? offer.isActive : offer.active;
           const discountLabel = offer.discount || (offer.discountPercent ? `${offer.discountPercent}% OFF` : "Special Offer");
           return (
-            <div key={id} className={`bg-linear-to-br ${offer.bg || "from-blue-700 to-blue-900"} rounded-3xl p-6 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300 shadow-md hover:shadow-xl`}>
-              <div className={`absolute -right-8 -bottom-8 w-40 h-40 ${offer.accent || "bg-blue-500"} rounded-full opacity-30 blur-2xl group-hover:scale-150 transition-transform duration-700`} />
+            <div
+              key={id}
+              className="rounded-3xl p-6 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300 shadow-md hover:shadow-xl"
+              style={{ background: themeColor }}
+            >
+              <div className="absolute -right-8 -bottom-8 w-40 h-40 bg-white/25 rounded-full opacity-40 blur-2xl group-hover:scale-150 transition-transform duration-700" />
 
               <div className="relative z-10 flex items-center justify-between mb-4">
                 <span className="bg-white/20 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-widest">
-                  {offer.offerType || "banner"}
+                  {offerType}
                 </span>
                 <span className="text-white/90 text-xs font-bold">Priority: {offer.priority || 0}</span>
               </div>
@@ -374,8 +412,12 @@ const AdminOffers = () => {
               </div>
 
               <div className="relative z-10 flex items-center gap-2 pt-4 border-t border-white/10">
-                <button onClick={() => toggleOffer(id)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${active ? "bg-white text-slate-900" : "bg-white/15 text-white border border-white/20"}`}>
-                  {active ? "Active" : "Inactive"}
+                <button
+                  onClick={() => handleToggle(id)}
+                  disabled={togglingId === id}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${active ? "bg-white text-slate-900" : "bg-white/15 text-white border border-white/20"}`}
+                >
+                  {togglingId === id ? "Updating..." : active ? "Active" : "Inactive"}
                 </button>
 
                 <button onClick={() => setModal(offer)} className="ml-auto p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors border border-white/10" title="Edit">

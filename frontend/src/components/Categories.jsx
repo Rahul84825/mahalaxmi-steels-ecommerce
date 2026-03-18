@@ -44,21 +44,21 @@ const Categories = ({ activeCategory = "all", onCategoryChange }) => {
   );
 
   return (
-    <section className="py-14 sm:py-16 bg-white">
+    <section className="section-shell bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 sm:mb-10">
           <div>
-            <p className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-blue-700 mb-2">
+            <p className="eyebrow mb-2">
               <LayoutGrid className="w-4 h-4" />
               Categories
             </p>
-            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Shop by Category</h2>
-            <p className="text-slate-500 text-sm sm:text-base mt-2">Browse cookware, pressure cookers, gas stoves, utensils, and appliances in one tap.</p>
+            <h2 className="section-title">Shop by Category</h2>
+            <p className="section-subtitle mt-2">Browse cookware, pressure cookers, gas stoves, utensils, and appliances in one tap.</p>
           </div>
 
           <button
             onClick={() => navigate("/products")}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-slate-200 text-slate-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 text-sm font-bold transition-all"
+            className="btn-secondary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
           >
             View Full Catalog
             <ArrowRight className="w-4 h-4" />
@@ -85,12 +85,12 @@ const Categories = ({ activeCategory = "all", onCategoryChange }) => {
                 <button
                   key={id}
                   onClick={() => handleSelect(id)}
-                  className={`group relative rounded-3xl overflow-hidden border text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${isActive ? "border-blue-400 ring-4 ring-blue-100" : "border-slate-200"}`}
+                  className={`group relative rounded-3xl overflow-hidden border text-left transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl ${isActive ? "border-blue-400 ring-4 ring-blue-100 shadow-lg shadow-blue-100/70" : "border-slate-200"}`}
                 >
                   <div className={`absolute inset-0 bg-linear-to-br ${GRADIENTS[index % GRADIENTS.length]}`} />
 
                   <div className="relative z-10 p-4 sm:p-5 h-full min-h-42.5 flex flex-col justify-between">
-                    <div className="w-14 h-14 rounded-2xl bg-white border border-white/60 shadow-sm overflow-hidden flex items-center justify-center text-3xl">
+                    <div className="w-14 h-14 rounded-2xl bg-white border border-white/60 shadow-sm overflow-hidden flex items-center justify-center text-3xl group-hover:scale-105 transition-transform">
                       {image && image.startsWith("http") ? (
                         <img src={image} alt={label} className="w-full h-full object-cover" />
                       ) : (
@@ -99,7 +99,7 @@ const Categories = ({ activeCategory = "all", onCategoryChange }) => {
                     </div>
 
                     <div>
-                      <p className="text-slate-900 font-extrabold text-base leading-tight">{label}</p>
+                      <p className="text-slate-900 font-extrabold text-[15px] sm:text-base leading-tight">{label}</p>
                       <p className="text-slate-500 text-xs mt-1">Tap to explore products</p>
                     </div>
                   </div>

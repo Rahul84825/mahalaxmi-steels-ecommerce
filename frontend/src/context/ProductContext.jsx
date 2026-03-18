@@ -19,21 +19,29 @@ const normalizeProduct = (p = {}) => {
 
 const normalizeOffer = (o = {}) => {
   const isActive = o.is_active ?? o.isActive ?? o.active ?? true;
-  const linkedCategory = o.linked_category ?? o.targetCategory ?? o.category ?? "";
+  const linkedCategory = o.linked_category_id ?? o.linked_category ?? o.targetCategory ?? o.category ?? null;
   const linkedProduct = o.linked_product_id ?? o.targetProduct ?? null;
   const discountPercentage = Number(o.discount_percentage ?? o.discountPercent ?? 0) || 0;
-  const bannerImage = o.banner_image ?? o.image ?? "";
+  const bannerImage = o.image ?? o.banner_image ?? "";
+  const offerType = o.offer_type ?? o.offerType ?? (linkedProduct ? "product" : linkedCategory ? "category" : "banner");
+  const themeColor = o.theme_color ?? o.themeColor ?? o.bg ?? "linear-gradient(135deg, #2563eb 0%, #1e40af 100%)";
 
   return {
     ...o,
     id: o._id || o.id,
-    banner_image: bannerImage,
     image: bannerImage,
+    banner_image: bannerImage,
     linked_product_id: linkedProduct,
     targetProduct: linkedProduct,
+    linked_category_id: linkedCategory,
     linked_category: linkedCategory,
     targetCategory: linkedCategory,
     category: linkedCategory,
+    offer_type: offerType,
+    offerType,
+    theme_color: themeColor,
+    themeColor,
+    bg: themeColor,
     discount_percentage: discountPercentage,
     discountPercent: discountPercentage,
     is_active: !!isActive,
