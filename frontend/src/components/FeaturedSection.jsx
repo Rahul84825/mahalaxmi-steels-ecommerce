@@ -2,6 +2,7 @@ import { ArrowRight, Sparkles, TrendingUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ProductCard from "./ProductCard";
 import { useProducts } from "../context/ProductContext";
+import { getCategoryQueryValue } from "../utils/category";
 
 const DEFAULT_OFFER_THEME_COLOR = "linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)";
 
@@ -47,7 +48,10 @@ const OffersSection = () => {
       return `/products/${id}`;
     }
     if (linkedCategory) {
-      return `/products?category=${linkedCategory}`;
+      const categoryValue = getCategoryQueryValue(linkedCategory);
+      if (categoryValue) {
+        return `/products?category=${encodeURIComponent(categoryValue)}`;
+      }
     }
     return "/products";
   };

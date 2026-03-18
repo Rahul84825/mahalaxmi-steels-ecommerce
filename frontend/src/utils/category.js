@@ -8,6 +8,31 @@ const normalizeNameToSlug = (name = "") =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
+const isObjectObjectToken = (value = "") =>
+  String(value).trim().toLowerCase() === "[object object]";
+
+export const sanitizeCategoryQueryValue = (value) => {
+  const raw = toStringValue(value);
+  if (!raw || isObjectObjectToken(raw)) return "all";
+  return raw;
+};
+
+export const getCategoryQueryValue = (category) => {
+  if (!category) return "";
+
+  if (typeof category === "object") {
+    const id = category._id || category.id || category.slug;
+    if (id) return String(id);
+
+    const name = category.name || category.label || "";
+    return normalizeNameToSlug(name);
+  }
+
+  const raw = toStringValue(category);
+  if (!raw || isObjectObjectToken(raw)) return "";
+  return raw;
+};
+
 export const getCategoryLabel = (category, categories = []) => {
   if (!category) return "";
 

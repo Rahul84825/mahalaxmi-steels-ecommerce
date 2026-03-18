@@ -1,6 +1,36 @@
 const asyncHandler = require("express-async-handler");
 const Product      = require("../models/Product");
 const Category     = require("../models/Category");
+const mongoose     = require("mongoose");
+
+const normalizeCategoryToken = (value = "") =>
+  String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/\(|\)/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+const resolveCategoryIdFromQuery = async (categoryQuery) => {
+  const raw = String(categoryQuery || "").trim();
+  if (!raw || raw.toLowerCase() === "all" || raw.toLowerCase() === "[object object]") {
+    return null;
+  }
+
+  if (mongoose.Types.ObjectId.isValid(raw)) {
+    const existingById = await Category.findById(raw).select("_id");
+    if (existingById) return existingById._id;
+  }
+
+  const token = normalizeCategoryToken(raw);
+  if (!token) return null;
+
+  const categories = await Category.find({}).select("_id name");
+  const matched = categories.find((cat) => normalizeCategoryToken(cat.name) === token);
+
+  return matched?._id || null;
+};
 
 const normalizeImageArray = (images, image) => {
   const base = Array.isArray(images) ? images : [];
@@ -19,7 +49,10 @@ const getProducts = asyncHandler(async (req, res) => {
 
   const filter = {};
   if (category && category !== "all") {
-    filter.category_id = category;
+    const resolvedCategoryId = await resolveCategoryIdFromQuery(category);
+    if (resolvedCategoryId) {
+      filter.category_id = resolvedCategoryId;
+    }
   }
   if (inStockOnly === "true")         filter.inStock   = true;
   if (search) {

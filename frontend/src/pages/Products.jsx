@@ -3,13 +3,14 @@ import { useSearchParams, Link } from "react-router-dom";
 import { ChevronRight, Home, Search as SearchIcon } from "lucide-react";
 import ProductGrid, { DEFAULT_FILTERS } from "../components/ProductGrid";
 import { useProducts } from "../context/ProductContext";
-import { getCategoryLabel } from "../utils/category";
+import { getCategoryLabel, sanitizeCategoryQueryValue } from "../utils/category";
 
 const Products = () => {
-  const [searchParams]    = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { categories }    = useProducts();
 
-  const urlCategory = searchParams.get("category") || "all";
+  const rawCategory = searchParams.get("category");
+  const urlCategory = sanitizeCategoryQueryValue(rawCategory);
   const urlSort     = searchParams.get("sortBy")   || "default";
   const urlSearch   = searchParams.get("search")   || "";
   const urlWishlist = searchParams.get("wishlist") === "1";
@@ -23,9 +24,22 @@ const Products = () => {
   });
 
   useEffect(() => {
+    const normalizedRawCategory = String(rawCategory || "").trim().toLowerCase();
+    const hasInvalidCategoryToken =
+      rawCategory !== null &&
+      (normalizedRawCategory === "[object object]" || normalizedRawCategory === "");
+
+    if (!hasInvalidCategoryToken) return;
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("category");
+    setSearchParams(nextParams, { replace: true });
+  }, [rawCategory, searchParams, setSearchParams]);
+
+  useEffect(() => {
     setInitialFilters({
       ...DEFAULT_FILTERS,
-      category: searchParams.get("category") || "all",
+      category: sanitizeCategoryQueryValue(searchParams.get("category")),
       sortBy:   searchParams.get("sortBy")   || "default",
       search:   searchParams.get("search")   || "",
       wishlistOnly: searchParams.get("wishlist") === "1",
@@ -34,7 +48,7 @@ const Products = () => {
 
   const categoryName = !urlCategory || urlCategory === "all"
     ? null
-    : getCategoryLabel(urlCategory, categories) || urlCategory;
+    : getCategoryLabel(urlCategory, categories) || "";
 
   const [productCount, setProductCount] = useState(null);
 
