@@ -275,9 +275,11 @@ const OfferModal = ({ offer, products, categories, onSave, onClose }) => {
 };
 
 const AdminOffers = () => {
-  const { offers, products, categories, addOffer, updateOffer, deleteOffer, toggleOffer } = useProducts();
+  const { offers, products, categories, addOffer, updateOffer, deleteOffer, toggleOffer, refresh } = useProducts();
   const [modal, setModal] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [status, setStatus] = useState({ type: "", message: "" });
+  const [deleting, setDeleting] = useState(false);
 
   const sortedOffers = useMemo(
     () => [...offers].sort((a, b) => Number(b.priority || 0) - Number(a.priority || 0)),
@@ -287,8 +289,38 @@ const AdminOffers = () => {
   const getId = (o) => o._id || o.id;
 
   const handleSave = async (form) => {
-    if (modal === "add") return addOffer(form);
-    return updateOffer(getId(modal), form);
+    try {
+      if (modal === "add") {
+        await addOffer(form);
+        setStatus({ type: "success", message: "Offer created successfully." });
+      } else {
+        await updateOffer(getId(modal), form);
+        setStatus({ type: "success", message: "Offer updated successfully." });
+      }
+      await refresh();
+      return true;
+    } catch (err) {
+      console.error("Offer save failed", err);
+      setStatus({ type: "error", message: err.message || "Failed to save offer." });
+      throw err;
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+
+    setDeleting(true);
+    try {
+      await deleteOffer(deleteConfirm);
+      await refresh();
+      setStatus({ type: "success", message: "Offer deleted successfully." });
+    } catch (err) {
+      console.error("Offer delete failed", err);
+      setStatus({ type: "error", message: err.message || "Failed to delete offer." });
+    } finally {
+      setDeleting(false);
+      setDeleteConfirm(null);
+    }
   };
 
   return (
@@ -302,6 +334,18 @@ const AdminOffers = () => {
           <PlusCircle className="w-4 h-4" /> New Offer
         </button>
       </div>
+
+      {status.message ? (
+        <div
+          className={`mb-5 px-4 py-3 rounded-xl text-sm font-semibold ${
+            status.type === "error"
+              ? "bg-rose-50 text-rose-700 border border-rose-100"
+              : "bg-emerald-50 text-emerald-700 border border-emerald-100"
+          }`}
+        >
+          {status.message}
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
         {sortedOffers.map((offer) => {
@@ -367,13 +411,11 @@ const AdminOffers = () => {
             <div className="flex gap-3">
               <button onClick={() => setDeleteConfirm(null)} className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold transition-colors">Cancel</button>
               <button
-                onClick={() => {
-                  deleteOffer(deleteConfirm);
-                  setDeleteConfirm(null);
-                }}
+                onClick={handleDelete}
+                disabled={deleting}
                 className="flex-1 px-4 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-bold transition-colors"
               >
-                Delete
+                {deleting ? "Deleting..." : "Delete"}
               </button>
             </div>
           </div>

@@ -207,14 +207,26 @@ export const ProductProvider = ({ children }) => {
   };
 
   const updateOffer = async (id, updates) => {
-    const data = await api.put(`/api/offers/${id}`, updates, token());
-    const updated = normalizeOffer(data.offer || data);
-    setOffers((prev) => prev.map((o) => (o._id || o.id) === id ? updated : o));
+    try {
+      const data = await api.put(`/api/offers/${id}`, updates, token());
+      const updated = normalizeOffer(data.offer || data);
+      setOffers((prev) => prev.map((o) => (o._id || o.id) === id ? updated : o));
+      return updated;
+    } catch (err) {
+      console.error("Failed to update offer", { id, updates, error: err });
+      throw err;
+    }
   };
 
   const deleteOffer = async (id) => {
-    await api.delete(`/api/offers/${id}`, token());
-    setOffers((prev) => prev.filter((o) => (o._id || o.id) !== id));
+    try {
+      await api.delete(`/api/offers/${id}`, token());
+      setOffers((prev) => prev.filter((o) => (o._id || o.id) !== id));
+      return true;
+    } catch (err) {
+      console.error("Failed to delete offer", { id, error: err });
+      throw err;
+    }
   };
 
   const toggleOffer = async (id) => {

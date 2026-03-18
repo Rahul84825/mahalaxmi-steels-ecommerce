@@ -44,6 +44,46 @@ const normalizeOfferPayload = (body = {}) => {
   };
 };
 
+const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
+
+const buildOfferUpdatePayload = (body = {}) => {
+  const updates = {};
+
+  if (hasOwn(body, "title")) updates.title = body.title;
+  if (hasOwn(body, "description") || hasOwn(body, "subtitle")) {
+    updates.description = body.description ?? body.subtitle ?? "";
+  }
+  if (hasOwn(body, "banner_image") || hasOwn(body, "image")) {
+    updates.banner_image = body.banner_image ?? body.image ?? "";
+  }
+  if (hasOwn(body, "discount_percentage") || hasOwn(body, "discountPercent") || hasOwn(body, "discount")) {
+    const discountPercentage = Number(
+      body.discount_percentage ?? body.discountPercent ?? body.discount ?? 0
+    );
+    updates.discount_percentage = Number.isNaN(discountPercentage) ? 0 : discountPercentage;
+  }
+  if (hasOwn(body, "linked_product_id") || hasOwn(body, "targetProduct")) {
+    updates.linked_product_id = normalizeOptionalObjectId(body.linked_product_id ?? body.targetProduct) ?? null;
+  }
+  if (hasOwn(body, "linked_category") || hasOwn(body, "targetCategory") || hasOwn(body, "category")) {
+    updates.linked_category = body.linked_category ?? body.targetCategory ?? body.category ?? "";
+  }
+  if (hasOwn(body, "is_active") || hasOwn(body, "isActive") || hasOwn(body, "active")) {
+    updates.is_active =
+      body.is_active !== undefined
+        ? !!body.is_active
+        : body.isActive !== undefined
+          ? !!body.isActive
+          : !!body.active;
+  }
+  if (hasOwn(body, "priority")) updates.priority = Number(body.priority ?? 0);
+  if (hasOwn(body, "badge")) updates.badge = body.badge ?? "";
+  if (hasOwn(body, "bg")) updates.bg = body.bg;
+  if (hasOwn(body, "accent")) updates.accent = body.accent;
+
+  return updates;
+};
+
 const getOffers    = asyncHandler(async (req, res) => {
   const offers = await Offer.find()
     .sort({ is_active: -1, priority: -1, created_at: -1 })
@@ -63,54 +103,32 @@ const createOffer  = asyncHandler(async (req, res) => {
 });
 
 const updateOffer  = asyncHandler(async (req, res) => {
-  const offer = await Offer.findById(req.params.id);
-  if (!offer) { res.status(404); throw new Error("Offer not found"); }
+  const updates = buildOfferUpdatePayload(req.body);
+  const updated = await Offer.findByIdAndUpdate(
+    req.params.id,
+    { $set: updates },
+    { new: true, runValidators: true }
+  );
 
-  const normalized = normalizeOfferPayload(req.body);
-  const fields = [
-    "title",
-    "description",
-    "banner_image",
-    "discount_percentage",
-    "linked_product_id",
-    "linked_category",
-    "is_active",
-    "priority",
-    "badge",
-    "bg",
-    "accent",
-  ];
-
-  fields.forEach((f) => {
-    if (normalized[f] !== undefined && req.body[f] !== undefined) {
-      offer[f] = normalized[f];
-    }
-  });
-
-  // Backward-compatible update keys.
-  if (req.body.image !== undefined) offer.banner_image = normalized.banner_image;
-  if (req.body.discountPercent !== undefined || req.body.discount !== undefined) {
-    offer.discount_percentage = normalized.discount_percentage;
-  }
-  if (req.body.targetProduct !== undefined) offer.linked_product_id = normalized.linked_product_id;
-  if (req.body.targetCategory !== undefined || req.body.category !== undefined) {
-    offer.linked_category = normalized.linked_category;
-  }
-  if (req.body.isActive !== undefined || req.body.active !== undefined) {
-    offer.is_active = normalized.is_active;
+  if (!updated) {
+    res.status(404);
+    throw new Error("Offer not found");
   }
 
-  const updated = await offer.save();
   const populated = await Offer.findById(updated._id)
     .populate("linked_product_id", "name image images price mrp category");
-  res.json(populated);
+  console.log(`[offers] updated offer ${updated._id}`);
+  res.json({ offer: populated });
 });
 
 const deleteOffer  = asyncHandler(async (req, res) => {
-  const offer = await Offer.findById(req.params.id);
-  if (!offer) { res.status(404); throw new Error("Offer not found"); }
-  await offer.deleteOne();
-  res.json({ message: "Offer deleted" });
+  const deleted = await Offer.findByIdAndDelete(req.params.id);
+  if (!deleted) {
+    res.status(404);
+    throw new Error("Offer not found");
+  }
+  console.log(`[offers] deleted offer ${deleted._id}`);
+  res.json({ message: "Offer deleted", deletedId: deleted._id });
 });
 
 const toggleOffer  = asyncHandler(async (req, res) => {

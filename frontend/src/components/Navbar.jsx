@@ -462,18 +462,11 @@ const Navbar = memo(() => {
             Products
           </NavLink>
           <NavLink
-            to="/products?wishlist=1"
-            onClick={() => setMenuOpen(false)}
-            className={mobileNavLinkClass}
-          >
-            Wishlist
-          </NavLink>
-          <NavLink
             to="/about"
             onClick={() => setMenuOpen(false)}
             className={mobileNavLinkClass}
           >
-            About Us
+            About
           </NavLink>
           <NavLink
             to="/contact"
