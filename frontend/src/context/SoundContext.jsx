@@ -6,9 +6,9 @@ const SoundContext = createContext(null);
 
 const SOUND_FILES = {
   order: "/sounds/zomato_ring_5.mp3",
-  cart: "/sounds/zomato_ring_5.mp3",
-  wishlist: "/sounds/zomato_ring_5.mp3",
 };
+
+const NOTIFICATION_COOLDOWN_MS = 1800;
 
 const SOCKET_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/api\/?$/, "");
 
@@ -17,10 +17,11 @@ export const SoundProvider = ({ children }) => {
   const unlockedRef = useRef(false);
   const pendingAdminSoundRef = useRef(false);
   const audioMapRef = useRef({});
+  const lastPlayRef = useRef({});
 
   const ensureAudio = useCallback((name) => {
     if (!audioMapRef.current[name]) {
-      const sound = new Audio(SOUND_FILES[name] || SOUND_FILES.cart);
+      const sound = new Audio(SOUND_FILES[name] || SOUND_FILES.order);
       sound.preload = "auto";
       sound.loop = false;
       sound.load();
@@ -29,7 +30,7 @@ export const SoundProvider = ({ children }) => {
     return audioMapRef.current[name];
   }, []);
 
-  const play = useCallback(async (name = "cart", { loopWhileHidden = false } = {}) => {
+  const play = useCallback(async (name = "order", { loopWhileHidden = false } = {}) => {
     const audio = ensureAudio(name);
     if (!audio) return false;
 
@@ -45,6 +46,24 @@ export const SoundProvider = ({ children }) => {
       return false;
     }
   }, [ensureAudio]);
+
+  const playNotificationSound = useCallback(async (type = "order", options = {}) => {
+    if (type !== "order" && type !== "order_status") return false;
+
+    const key = type === "order_status" ? "order" : type;
+    const now = Date.now();
+    const last = lastPlayRef.current[key] || 0;
+
+    if (now - last < NOTIFICATION_COOLDOWN_MS) {
+      return false;
+    }
+
+    const ok = await play(key, options);
+    if (ok) {
+      lastPlayRef.current[key] = now;
+    }
+    return ok;
+  }, [play]);
 
   const stop = useCallback((name = "order") => {
     const audio = audioMapRef.current[name];
@@ -76,12 +95,12 @@ export const SoundProvider = ({ children }) => {
 
       if (pendingAdminSoundRef.current) {
         pendingAdminSoundRef.current = false;
-        play("order", { loopWhileHidden: true });
+        playNotificationSound("order", { loopWhileHidden: true });
       }
     } catch {
       // keep waiting for another interaction
     }
-  }, [ensureAudio, play]);
+  }, [ensureAudio, playNotificationSound]);
 
   useEffect(() => {
     const onVisible = () => {
@@ -112,7 +131,7 @@ export const SoundProvider = ({ children }) => {
     });
 
     socket.on("newOrder", async () => {
-      const ok = await play("order", { loopWhileHidden: true });
+      const ok = await playNotificationSound("order", { loopWhileHidden: true });
       if (!ok) pendingAdminSoundRef.current = true;
     });
 
@@ -120,9 +139,12 @@ export const SoundProvider = ({ children }) => {
       stop("order");
       socket.disconnect();
     };
-  }, [play, stop, user]);
+  }, [playNotificationSound, stop, user]);
 
-  const value = useMemo(() => ({ play, stop, unlockAudio }), [play, stop, unlockAudio]);
+  const value = useMemo(
+    () => ({ play, stop, unlockAudio, playNotificationSound }),
+    [play, stop, unlockAudio, playNotificationSound]
+  );
 
   return <SoundContext.Provider value={value}>{children}</SoundContext.Provider>;
 };

@@ -94,7 +94,7 @@ const upsertOrderAtTop = (list, incoming) => {
 
 export const ProductProvider = ({ children }) => {
   const { user } = useAuth();
-  const { play } = useSound();
+  const { playNotificationSound } = useSound();
   const [products,   setProducts]   = useState([]);
   const [offers,     setOffers]     = useState([]);
   const [categories, setCategories] = useState([]);
@@ -322,6 +322,8 @@ export const ProductProvider = ({ children }) => {
     const data = await api.post("/api/orders", payload, token());
     const newOrder = data.order || data;
     setOrders((prev) => upsertOrderAtTop(prev, newOrder).list);
+    // Order placement is a high-priority event and the only shopper-side action with sound.
+    playNotificationSound("order");
     return newOrder;
   };
 
@@ -390,7 +392,6 @@ export const ProductProvider = ({ children }) => {
         if (prev.includes(id)) return prev.filter((item) => item !== id);
         return [id, ...prev];
       });
-      play("wishlist");
       try {
         if (currentlyWishlisted) {
           await api.delete(`/api/wishlist/${id}`, token());
@@ -411,9 +412,8 @@ export const ProductProvider = ({ children }) => {
         localStorage.setItem(WISHLIST_KEY, JSON.stringify(next));
         return next;
       });
-      play("wishlist");
     }
-  }, [play, user, wishlist]);
+  }, [user, wishlist]);
 
   const clearRecentlyViewed = useCallback(() => setRecentlyViewed([]), []);
 
