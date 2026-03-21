@@ -10,6 +10,9 @@ import { api } from "../utils/api";
 import { useCart } from "../context/CartContext";
 import { useProducts } from "../context/ProductContext";
 import { getCategoryLabel, getCategorySlug } from "../utils/category";
+import { io } from "socket.io-client";
+
+const SOCKET_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/api\/?$/, "");
 
 const ProductNotFound = () => (
   <div className="min-h-screen flex flex-col items-center justify-center text-center px-4">
@@ -50,8 +53,38 @@ const ProductDetails = () => {
     setImgErrors({});
   }, [product]);
 
-  async function fetchProduct() {
-    setLoading(true); setError(false);
+  // ── Real-time Synchronization ─────────────────────────────────────
+  useEffect(() => {
+    const socket = io(SOCKET_URL, {
+      transports: ["websocket", "polling"],
+      withCredentials: true,
+      reconnection: true,
+    });
+
+    socket.on("product_updated", (updatedProduct) => {
+      if (String(updatedProduct._id || updatedProduct.id) === String(id)) {
+        setProduct(updatedProduct);
+      }
+    });
+
+    socket.on("product_deleted", (deletedId) => {
+      if (String(deletedId) === String(id)) {
+        setError(true);
+      }
+    });
+
+    return () => socket.disconnect();
+  }, [id]);
+
+  // ── Fallback: Refetch on Window Focus ─────────────────────────────
+  useEffect(() => {
+    const onFocus = () => fetchProduct(true);
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [id]);
+
+  async function fetchProduct(quiet = false) {
+    if (!quiet) { setLoading(true); setError(false); }
     try {
       const data = await api.get(`/api/products/${id}`);
       const p = data.product || data;
@@ -63,8 +96,8 @@ const ProductDetails = () => {
         const relProducts = rel.products || rel.data || [];
         setRelated(relProducts.filter((r) => (r._id || r.id) !== (p._id || p.id)).slice(0, 4));
       }
-    } catch { setError(true); }
-    finally { setLoading(false); }
+    } catch { if (!quiet) setError(true); }
+    finally { if (!quiet) setLoading(false); }
   }
 
   const productStock = Number(product?.stock ?? 0);

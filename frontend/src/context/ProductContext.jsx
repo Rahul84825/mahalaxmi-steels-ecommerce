@@ -2,6 +2,9 @@ import { createContext, useContext, useState, useEffect, useMemo, useCallback } 
 import { api } from "../utils/api";
 import { useAuth } from "./AuthContext";
 import { useSound } from "./SoundContext";
+import { io } from "socket.io-client";
+
+const SOCKET_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/api\/?$/, "");
 
 const normalizeProduct = (p = {}) => {
   const images = Array.isArray(p.images) ? p.images.filter(Boolean) : [];
@@ -146,9 +149,47 @@ export const ProductProvider = ({ children }) => {
     localStorage.setItem(RECENTLY_VIEWED_KEY, JSON.stringify(recentlyViewed));
   }, [recentlyViewed]);
 
-  async function fetchAll() {
-    setLoading(true);
-    setError(null);
+  // ── Real-time Socket Listeners ────────────────────────────────────
+  useEffect(() => {
+    const socket = io(SOCKET_URL, {
+      transports: ["websocket", "polling"],
+      withCredentials: true,
+      reconnection: true,
+    });
+
+    socket.on("product_created", (newProduct) => {
+      setProducts((prev) => {
+        const exists = prev.find((p) => String(p._id || p.id) === String(newProduct._id || newProduct.id));
+        if (exists) return prev;
+        return [normalizeProduct(newProduct), ...prev];
+      });
+    });
+
+    socket.on("product_updated", (updatedProduct) => {
+      setProducts((prev) =>
+        prev.map((p) => (String(p._id || p.id) === String(updatedProduct._id || updatedProduct.id) ? normalizeProduct(updatedProduct) : p))
+      );
+    });
+
+    socket.on("product_deleted", (deletedId) => {
+      setProducts((prev) => prev.filter((p) => String(p._id || p.id) !== String(deletedId)));
+    });
+
+    return () => socket.disconnect();
+  }, []);
+
+  // ── Fallback: Refetch on Window Focus ─────────────────────────────
+  useEffect(() => {
+    const onFocus = () => fetchAll(true);
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, []);
+
+  async function fetchAll(quiet = false) {
+    if (!quiet) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const [prodRes, catRes, offerRes] = await Promise.allSettled([
         api.get("/api/products?limit=100"),
@@ -174,9 +215,9 @@ export const ProductProvider = ({ children }) => {
         setOffers([]);
       }
     } catch (err) {
-      setError(err.message);
+      if (!quiet) setError(err.message);
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
   }
 
