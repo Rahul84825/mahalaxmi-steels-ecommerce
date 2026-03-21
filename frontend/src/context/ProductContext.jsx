@@ -5,7 +5,7 @@ import { useSound } from "./SoundContext";
 
 const normalizeProduct = (p = {}) => {
   const images = Array.isArray(p.images) ? p.images.filter(Boolean) : [];
-  const image = p.image || images[0] || "";
+  const image = (images && images[0]) || p.image || "";
   const categoryValue = p.category || p.category_id || null;
 
   return {
@@ -284,10 +284,10 @@ export const ProductProvider = ({ children }) => {
   };
 
   const placeOrder = async ({ cartItems, address, paymentMethod }) => {
-    const subtotal  = cartItems.reduce((s, i) => s + i.price * i.quantity, 0);
+    const subtotal  = Math.round(cartItems.reduce((s, i) => s + i.price * i.quantity, 0));
     const delivery  = subtotal >= 999 ? 0 : 79;
     const codFee    = paymentMethod === "cod" ? 50 : 0;
-    const total     = subtotal + delivery + codFee;
+    const total     = Math.round(subtotal + delivery + codFee);
     const itemCount = cartItems.reduce((s, i) => s + i.quantity, 0);
 
     const payload = {

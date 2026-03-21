@@ -2,19 +2,11 @@ import { LayoutGrid, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useProducts } from "../context/ProductContext";
 
-const GRADIENTS = [
-  "from-slate-100 via-slate-50 to-white",
-  "from-blue-100 via-cyan-50 to-white",
-  "from-orange-100 via-amber-50 to-white",
-  "from-emerald-100 via-teal-50 to-white",
-  "from-rose-100 via-pink-50 to-white",
-];
-
 const FALLBACK_EMOJI = ["🍳", "🥘", "🔥", "🥄", "⚡"];
 
 const Categories = ({ activeCategory = "all", onCategoryChange }) => {
   const navigate = useNavigate();
-  const { categories, products, loading, error } = useProducts();
+  const { categories, loading, error } = useProducts();
   const activeCategories = (categories || []).filter((c) => c.is_active ?? c.isActive ?? c.active);
 
   const handleSelect = (catId) => {
@@ -25,20 +17,12 @@ const Categories = ({ activeCategory = "all", onCategoryChange }) => {
     navigate(catId === "all" ? "/products" : `/products?category=${catId}`);
   };
 
-  const resolveCategoryImage = (category, index) => {
-    const categoryId = category.id || category._id;
-    const imageFromProduct = (products || []).find((p) => {
-      const productCategory = typeof p.category === "object" ? p.category?._id || p.category?.id : p.category;
-      return productCategory === categoryId && (p.image || p.images?.[0]);
-    });
-
-    return imageFromProduct?.image || imageFromProduct?.images?.[0] || category.image || "";
-  };
+  const resolveCategoryImage = (category) => category.image || "";
 
   const renderSkeleton = () => (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-5">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="h-44 rounded-3xl bg-slate-200/70 animate-pulse" />
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-5 lg:gap-6">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="h-44 sm:h-52 rounded-2xl bg-slate-200/70 animate-pulse" />
       ))}
     </div>
   );
@@ -74,35 +58,58 @@ const Categories = ({ activeCategory = "all", onCategoryChange }) => {
         {loading ? (
           renderSkeleton()
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-5 lg:gap-6">
             {activeCategories.map((category, index) => {
               const id = category.id || category._id;
               const label = category.label || category.name || "Category";
-              const image = resolveCategoryImage(category, index);
+              const image = resolveCategoryImage(category);
               const isActive = activeCategory === id;
+              const fallbackEmoji = FALLBACK_EMOJI[index % FALLBACK_EMOJI.length];
 
               return (
                 <button
                   key={id}
                   onClick={() => handleSelect(id)}
-                  className={`group relative rounded-3xl overflow-hidden border text-left transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl ${isActive ? "border-blue-400 ring-4 ring-blue-100 shadow-lg shadow-blue-100/70" : "border-slate-200"}`}
+                  className={`relative group h-44 sm:h-52 rounded-2xl overflow-hidden border-2 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center
+                    ${isActive 
+                      ? "border-blue-400 ring-2 ring-blue-300 shadow-lg shadow-blue-200/50" 
+                      : "border-slate-200 hover:border-slate-300"
+                    }`}
                 >
-                  <div className={`absolute inset-0 bg-linear-to-br ${GRADIENTS[index % GRADIENTS.length]}`} />
-
-                  <div className="relative z-10 p-4 sm:p-5 h-full min-h-42.5 flex flex-col justify-between">
-                    <div className="w-14 h-14 rounded-2xl bg-white border border-white/60 shadow-sm overflow-hidden flex items-center justify-center text-3xl group-hover:scale-105 transition-transform">
-                      {image && image.startsWith("http") ? (
-                        <img src={image} alt={label} className="w-full h-full object-cover" />
-                      ) : (
-                        <span>{category.icon || FALLBACK_EMOJI[index % FALLBACK_EMOJI.length]}</span>
-                      )}
-                    </div>
-
-                    <div>
-                      <p className="text-slate-900 font-extrabold text-[15px] sm:text-base leading-tight">{label}</p>
-                      <p className="text-slate-500 text-xs mt-1">Tap to explore products</p>
-                    </div>
+                  {/* Background Image */}
+                  <div className="absolute inset-0 bg-slate-100 overflow-hidden">
+                    {image && image.startsWith("http") ? (
+                      <>
+                        <img
+                          src={image}
+                          alt={label}
+                          className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
+                        />
+                        {/* Gradient overlay for text contrast */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/20 to-transparent opacity-60 group-hover:opacity-50 transition-opacity duration-300" />
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                          <span className="text-6xl sm:text-7xl opacity-40 transition-transform duration-300 group-hover:scale-110">{fallbackEmoji}</span>
+                        </div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent" />
+                      </>
+                    )}
                   </div>
+
+                  {/* Content - Category Name */}
+                  <div className="absolute inset-0 flex flex-col items-start justify-end p-4 sm:p-5 z-10">
+                    <h3 className="text-white font-extrabold text-base sm:text-lg leading-tight drop-shadow-lg">
+                      {label}
+                    </h3>
+                    <p className="text-white/80 text-xs sm:text-sm font-semibold mt-1 drop-shadow-md group-hover:text-white/95 transition-opacity duration-300">
+                      Shop now
+                    </p>
+                  </div>
+
+                  {/* Hover overlay accent */}
+                  <div className={`absolute inset-0 bg-blue-500/0 group-hover:bg-blue-500/10 transition-colors duration-300 rounded-2xl pointer-events-none ${isActive ? "bg-blue-500/10" : ""}`} />
                 </button>
               );
             })}

@@ -16,12 +16,13 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
   const isWishlisted = wishlist.includes(productId);
 
   const mrp = product.mrp || product.originalPrice || 0;
-  const primaryImage = product.image || (Array.isArray(product.images) ? product.images[0] : "") || "";
+  const primaryImage = (Array.isArray(product.images) ? product.images[0] : "") || product.image || "";
   const discount = mrp > product.price
     ? Math.round(((mrp - product.price) / mrp) * 100)
     : 0;
 
   const badges = [];
+  if (product.has_variants && product.variants?.length > 0) badges.push({ label: `${product.variants.length} Sizes`, tone: "blue" });
   if (discount > 0) badges.push({ label: `${discount}% OFF`, tone: "rose" });
   if (!product.inStock) badges.push({ label: "Sold Out", tone: "slate" });
 
@@ -39,6 +40,7 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
   const cardPadding = compact ? "p-4" : "p-5";
 
   const badgeClass = {
+    blue: "bg-blue-500/95 text-white",
     rose: "bg-rose-500/95 text-white",
     slate: "bg-slate-800/95 text-white",
   };
@@ -140,7 +142,7 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
           )}
           {discount > 0 && (
             <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md ml-auto border border-emerald-100">
-              Save ₹{(mrp - product.price).toLocaleString("en-IN")}
+              Save ₹{Math.round(mrp - product.price).toLocaleString("en-IN")}
             </span>
           )}
         </div>

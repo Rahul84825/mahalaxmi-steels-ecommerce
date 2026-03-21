@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Save, UploadCloud, Image as ImageIcon, Tag, AlertCircle, CheckCircle2, X } from "lucide-react";
+import { ArrowLeft, Save, UploadCloud, Image as ImageIcon, Tag, AlertCircle, CheckCircle2, X, Plus, Trash2 } from "lucide-react";
 import { useProducts } from "../context/ProductContext";
 import { api } from "../utils/api";
 
 const EMPTY_FORM = {
   name: "", category: "", price: "", mrp: "",
   description: "", image: "", images: [], inStock: true,
-  brand: "", stock: "", tags: "",
+  brand: "", stock: "", tags: "", has_variants: false,
+  variants: [],
 };
 
 const AdminProductForm = ({ mode = "add" }) => {
@@ -37,12 +38,14 @@ const AdminProductForm = ({ mode = "add" }) => {
           price:       product.price       || "",
           mrp:         product.mrp || product.originalPrice || "",
           description: product.description || "",
-          image:       product.image || product.images?.[0] || "",
+          image:       product.images?.[0] || product.image || "",
           images:      product.images?.length ? product.images : (product.image ? [product.image] : []),
           inStock:     product.inStock     ?? true,
           brand:       product.brand       || "",
           stock:       product.stock       || "",
           tags:        (product.tags || []).join(", "),
+          has_variants: product.has_variants || false,
+          variants:    product.variants || [],
         });
         formPopulated.current = true;  
       }
@@ -148,6 +151,8 @@ const AdminProductForm = ({ mode = "add" }) => {
       image:         (form.images || [])[0] || "",
       images:        form.images || [],
       inStock:      form.inStock,
+      has_variants: form.has_variants,
+      variants:     form.has_variants ? (form.variants || []) : [],
     };
 
     setSubmitting(true);
@@ -164,6 +169,30 @@ const AdminProductForm = ({ mode = "add" }) => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const addVariant = () => {
+    const newVariant = { id: Date.now(), label: "", price: form.price, stock: 0 };
+    setForm((prev) => ({
+      ...prev,
+      variants: [...(prev.variants || []), newVariant],
+    }));
+  };
+
+  const deleteVariant = (id) => {
+    setForm((prev) => ({
+      ...prev,
+      variants: (prev.variants || []).filter((v) => v.id !== id),
+    }));
+  };
+
+  const updateVariant = (id, field, value) => {
+    setForm((prev) => ({
+      ...prev,
+      variants: (prev.variants || []).map((v) =>
+        v.id === id ? { ...v, [field]: value } : v
+      ),
+    }));
   };
 
   const discount =
@@ -322,7 +351,7 @@ const AdminProductForm = ({ mode = "add" }) => {
         {discount > 0 && (
           <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 text-emerald-800 px-4 py-2.5 rounded-xl text-sm font-bold">
             <Tag className="w-4 h-4 text-emerald-500" />
-            {discount}% Discount Applied <span className="text-emerald-600 font-medium ml-1">(Customer saves ₹{(+form.mrp - +form.price).toLocaleString("en-IN")})</span>
+            {discount}% Discount Applied <span className="text-emerald-600 font-medium ml-1">(Customer saves ₹{Math.round(+form.mrp - +form.price).toLocaleString("en-IN")})</span>
           </div>
         )}
 
@@ -341,6 +370,55 @@ const AdminProductForm = ({ mode = "add" }) => {
             <label className="block text-[13px] font-bold text-slate-700 mb-1.5">Search Tags <span className="text-slate-400 font-medium text-[10px] uppercase tracking-wider ml-1">(Comma Separated)</span></label>
             <input type="text" value={form.tags} onChange={(e) => set("tags", e.target.value)} placeholder="kadai, steel, cooking" className={inputClass(false)} />
           </div>
+        </div>
+
+        {/* ── Variants Section ── */}
+        <div className="flex flex-col gap-4 pt-4">
+          <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-sky-50/50 cursor-pointer hover:bg-sky-100/50 transition" onClick={() => set("has_variants", !form.has_variants)}>
+            <input type="checkbox" checked={form.has_variants} onChange={() => {}} className="w-4 h-4 cursor-pointer" />
+            <div>
+              <p className="text-sm font-bold text-slate-900">This product has variants</p>
+              <p className="text-[11px] font-medium text-slate-500">Add sizes, colors, or other options</p>
+            </div>
+          </div>
+
+          {form.has_variants && (
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-bold text-blue-900">Variants</p>
+                <button type="button" onClick={addVariant} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold rounded-lg transition">
+                  <Plus className="w-3.5 h-3.5" />
+                  Add Variant
+                </button>
+              </div>
+
+              {(!form.variants || form.variants.length === 0) ? (
+                <p className="text-xs font-medium text-blue-600 text-center py-2">No variants yet. Click "Add Variant" to create one.</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {form.variants.map((variant, idx) => (
+                    <div key={variant.id || idx} className="flex gap-2.5 items-end">
+                      <div className="flex-1">
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Label <span className="text-rose-500">*</span></label>
+                        <input type="text" placeholder="e.g. 1L, 3L, Red, Small" value={variant.label || ""} onChange={(e) => updateVariant(variant.id || idx, "label", e.target.value)} className={`${inputClass(false)} text-xs`} />
+                      </div>
+                      <div className="w-24">
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Price (₹)</label>
+                        <input type="number" placeholder="899" value={variant.price || ""} onChange={(e) => updateVariant(variant.id || idx, "price", +e.target.value)} className={`${inputClass(false)} text-xs`} />
+                      </div>
+                      <div className="w-24">
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Stock</label>
+                        <input type="number" placeholder="10" value={variant.stock || 0} onChange={(e) => updateVariant(variant.id || idx, "stock", +e.target.value)} className={`${inputClass(false)} text-xs`} />
+                      </div>
+                      <button type="button" onClick={() => deleteVariant(variant.id || idx)} className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-lg transition mb-1">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ── Stock Toggle ── */}

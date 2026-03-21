@@ -168,14 +168,14 @@ const PaymentForm = ({ selected, onSelect, errors, orderTotal }) => (
 // ── Order Summary ─────────────────────────────────────────────────────────────
 const OrderSummary = ({ cartItems, cartTotal, codFee = 0 }) => {
   const safeItems = Array.isArray(cartItems) ? cartItems : [];
-  const originalTotal = safeItems.reduce(
+  const originalTotal = Math.round(safeItems.reduce(
     (s, i) => s + toNumber(i.originalPrice || i.mrp || i.price) * toNumber(i.quantity ?? i.qty ?? 1, 1),
     0
-  );
+  ));
   const safeCartTotal = toNumber(cartTotal);
-  const savings = originalTotal - safeCartTotal;
+  const savings = Math.round(originalTotal - safeCartTotal);
   const delivery = safeCartTotal >= 999 ? 0 : 79;
-  const total = safeCartTotal + delivery + toNumber(codFee);
+  const total = Math.round(safeCartTotal + delivery + toNumber(codFee));
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
@@ -187,10 +187,10 @@ const OrderSummary = ({ cartItems, cartTotal, codFee = 0 }) => {
       </h3>
       <div className="space-y-3 mb-4 max-h-48 overflow-y-auto">
         {safeItems.map((item) => {
-          const imageSrc = item.image || item.imageUrl || item.product?.image || "";
+          const imageSrc = item.images?.[0] || item.image || item.imageUrl || item.product?.images?.[0] || item.product?.image || "";
           const canRender = isRenderableImage(imageSrc);
           const qty = toNumber(item.quantity ?? item.qty ?? 1, 1);
-          const linePrice = toNumber(item.price) * qty;
+          const linePrice = Math.round(toNumber(item.price) * qty);
           return (
             <div key={item._id || item.id} className="flex items-center gap-3">
               <div className="w-8 h-8 flex-shrink-0 rounded bg-gray-100 flex items-center justify-center overflow-hidden">

@@ -19,7 +19,7 @@ const CartItem = ({ item }) => {
   const { categories } = useProducts();
   const id = item._id || item.id;
   const originalPrice = item.originalPrice || item.mrp || item.price;
-  const savings = originalPrice - item.price;
+  const savings = Math.round(originalPrice - item.price);
   const discountPct = originalPrice > item.price ? Math.round((savings / originalPrice) * 100) : 0;
 
   const categoryLabel = getCategoryLabel(item.category, categories);
@@ -112,10 +112,10 @@ const Cart = () => {
   const navigate = useNavigate();
   const { cartItems, cartTotal, cartCount } = useCart();
 
-  const originalTotal  = cartItems.reduce((sum, item) => sum + (item.originalPrice || item.mrp || item.price) * item.quantity, 0);
-  const totalSavings   = originalTotal - cartTotal;
+  const originalTotal  = Math.round(cartItems.reduce((sum, item) => sum + (item.originalPrice || item.mrp || item.price) * item.quantity, 0));
+  const totalSavings   = Math.round(originalTotal - cartTotal);
   const deliveryCharge = cartTotal >= 999 ? 0 : cartTotal === 0 ? 0 : 79;
-  const finalTotal     = cartTotal + deliveryCharge;
+  const finalTotal     = Math.round(cartTotal + deliveryCharge);
 
   if (cartItems.length === 0) {
     return <div className="min-h-[80vh] bg-slate-50/50 flex items-center justify-center"><EmptyCart /></div>;

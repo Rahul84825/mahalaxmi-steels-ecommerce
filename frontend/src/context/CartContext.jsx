@@ -49,24 +49,42 @@ export const CartProvider = ({ children }) => {
   }, [cartItems, user, authLoading]);
 
   // ── Add to cart ───────────────────────────────────────────────────
-  const addToCart = (product) => {
+  const addToCart = (product, variant = null) => {
     setCartItems((prev) => {
-      const id = product._id || product.id;
-      const existing = prev.find((item) => (item._id || item.id) === id);
-      if (existing) {
-        return prev.map((item) =>
-          (item._id || item.id) === id
-            ? { ...item, quantity: Math.min(item.quantity + 1, 10) }
-            : item
-        );
+      const productId = product._id || product.id;
+      const variantId = variant?._id || variant?.id || null;
+      
+      // For variant products, key is product+variant. For regular, just product
+      const cartItemKey = variantId ? `${productId}-${variantId}` : productId;
+      
+      const existingIndex = prev.findIndex((item) => {
+        const itemKey = item.variant_id 
+          ? `${item._id || item.id}-${item.variant_id}`
+          : (item._id || item.id);
+        return itemKey === cartItemKey;
+      });
+      
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex].quantity = Math.min(updated[existingIndex].quantity + 1, 10);
+        return updated;
       }
+      
+      // Use variant price if available, otherwise product price
+      const price = variant?.price ?? product.price;
+      const stock = variant?.stock ?? product.stock;
+      
       return [
         ...prev,
         {
           ...product,
-          quantity:      1,
+          variant_id: variantId,
+          variant: variant || null,
+          quantity: 1,
+          price,
+          stock,
           originalPrice: product.originalPrice || product.mrp || product.price,
-          inStock:       product.inStock ?? true,
+          inStock: stock > 0,
         },
       ];
     });
@@ -96,7 +114,7 @@ export const CartProvider = ({ children }) => {
 
   // ── Derived values ────────────────────────────────────────────────
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const cartTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const cartTotal = Math.round(cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0));
   const isInCart  = (id) => cartItems.some((item) => (item._id || item.id) === id);
 
   return (

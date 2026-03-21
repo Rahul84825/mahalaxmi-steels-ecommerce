@@ -110,7 +110,7 @@ const AdminProducts = () => {
               ) : (
                 filtered.map((product) => {
                   const id = getId(product);
-                  const preview = product.image || product.images?.[0] || "";
+                  const preview = product.images?.[0] || product.image || "";
 
                   return (
                     <tr key={id} className="hover:bg-blue-50/40 transition-colors group">

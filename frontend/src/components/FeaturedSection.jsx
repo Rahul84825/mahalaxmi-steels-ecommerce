@@ -62,11 +62,11 @@ const OffersSection = () => {
     if (!linkedProduct) return "";
 
     if (typeof linkedProduct === "object") {
-      return linkedProduct.image || linkedProduct.images?.[0] || "";
+      return linkedProduct.images?.[0] || linkedProduct.image || "";
     }
 
     const product = (products || []).find((p) => (p._id || p.id) === linkedProduct);
-    return product?.image || product?.images?.[0] || "";
+    return product?.images?.[0] || product?.image || "";
   };
 
   return (

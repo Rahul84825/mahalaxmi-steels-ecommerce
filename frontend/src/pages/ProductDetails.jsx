@@ -44,6 +44,7 @@ const ProductDetails = () => {
   const [imgErrors, setImgErrors] = useState({});
   const [qty, setQty]             = useState(1);
   const [added, setAdded]         = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState(null);
 
   useEffect(() => { fetchProduct(); window.scrollTo(0, 0); }, [id]);
 
@@ -70,8 +71,20 @@ const ProductDetails = () => {
   }
 
   const handleAddToCart = () => {
-    if (!product?.inStock) return;
-    for (let i = 0; i < qty; i++) addToCart(product);
+    // If product has variants, require selection
+    if (product?.has_variants && !selectedVariant) {
+      alert("Please select a variant");
+      return;
+    }
+    
+    if (!product?.inStock && (!selectedVariant || selectedVariant?.stock <= 0)) {
+      alert("Out of stock");
+      return;
+    }
+    
+    for (let i = 0; i < qty; i++) {
+      addToCart(product, selectedVariant);
+    }
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
@@ -92,7 +105,7 @@ const ProductDetails = () => {
   const isEmojiImage = product.image && !product.image.startsWith("http");
   const mrp = product.mrp || product.originalPrice || 0;
   const discount = mrp > product.price ? Math.round(((mrp - product.price) / mrp) * 100) : 0;
-  const savings = mrp > product.price ? mrp - product.price : 0;
+  const savings = mrp > product.price ? Math.round(mrp - product.price) : 0;
   const categoryLabel = getCategoryLabel(product.category, categories);
   const categorySlug  = getCategorySlug(product.category, categories);
   const specs = product.specifications
@@ -101,6 +114,11 @@ const ProductDetails = () => {
 
   // rating > 0 to avoid rendering "0"
   const hasRating = product.rating > 0;
+  
+  // Use variant price and info if selected, otherwise use product price
+  const displayPrice = selectedVariant?.price ?? product.price;
+  const displayStock = selectedVariant?.stock ?? product.stock;
+  const displayInStock = product.has_variants ? (selectedVariant?.stock > 0) : product.inStock;
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -170,23 +188,60 @@ const ProductDetails = () => {
             )}
 
             <div className="flex items-baseline gap-3 mb-2">
-              <span className="text-3xl font-bold text-gray-900">₹{product.price.toLocaleString("en-IN")}</span>
-              {mrp > product.price && (
+              <span className="text-3xl font-bold text-gray-900">₹{displayPrice.toLocaleString("en-IN")}</span>
+              {mrp > displayPrice && (
                 <span className="text-lg text-gray-400 line-through">₹{mrp.toLocaleString("en-IN")}</span>
               )}
             </div>
             {savings > 0 && <p className="text-sm font-semibold text-green-600 mb-4">You save ₹{savings.toLocaleString("en-IN")} ({discount}% off)</p>}
 
             <div className="flex items-center gap-2 mb-6">
-              <span className={`w-2.5 h-2.5 rounded-full ${product.inStock ? "bg-green-500" : "bg-red-400"}`} />
-              <span className={`text-sm font-semibold ${product.inStock ? "text-green-600" : "text-red-500"}`}>
-                {product.inStock ? "In Stock — Ready to Ship" : "Out of Stock"}
+              <span className={`w-2.5 h-2.5 rounded-full ${displayInStock ? "bg-green-500" : "bg-red-400"}`} />
+              <span className={`text-sm font-semibold ${displayInStock ? "text-green-600" : "text-red-500"}`}>
+                {displayInStock ? "In Stock — Ready to Ship" : "Out of Stock"}
               </span>
             </div>
 
             {product.description && <p className="text-sm text-gray-600 leading-relaxed mb-6 border-t border-gray-100 pt-5">{product.description}</p>}
 
-            {product.inStock && (
+            {/* Variant Selection */}
+            {product.has_variants && product.variants && product.variants.length > 0 && (
+              <div className="mb-6 pb-6 border-b border-gray-200">
+                <label className="block text-sm font-bold text-gray-700 mb-3">Select Size:</label>
+                <div className="flex flex-wrap gap-3">
+                  {product.variants.map((variant) => {
+                    const isSelected = selectedVariant?._id === variant._id;
+                    const isOutOfStock = variant.stock <= 0;
+                    return (
+                      <button
+                        key={variant._id}
+                        onClick={() => !isOutOfStock && setSelectedVariant(variant)}
+                        disabled={isOutOfStock}
+                        className={`px-4 py-2 rounded-lg border-2 font-semibold transition-all text-sm
+                          ${isSelected 
+                            ? "border-blue-500 bg-blue-50 text-blue-900 shadow-lg shadow-blue-100/50" 
+                            : isOutOfStock
+                            ? "border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed opacity-50"
+                            : "border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:shadow-md"
+                          }`}
+                      >
+                        {variant.label}
+                        <span className="text-xs text-gray-500 block mt-0.5">₹{variant.price.toLocaleString("en-IN")}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedVariant && (
+                  <p className="text-xs text-gray-600 mt-3">
+                    Stock: <span className={selectedVariant.stock > 0 ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
+                      {selectedVariant.stock > 0 ? `${selectedVariant.stock} available` : "Out of stock"}
+                    </span>
+                  </p>
+                )}
+              </div>
+            )}
+
+            {displayInStock && (
               <div className="flex items-center gap-4 mb-5">
                 <span className="text-sm font-semibold text-gray-700">Quantity:</span>
                 <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
@@ -197,13 +252,13 @@ const ProductDetails = () => {
                 <span className="text-xs text-gray-400">Max 10 per order</span>
               </div>
             )}
-            {product.inStock && qty > 1 && <p className="text-xs text-gray-500 mb-4">Total: <span className="font-bold text-gray-800">₹{(product.price * qty).toLocaleString("en-IN")}</span></p>}
+            {displayInStock && qty > 1 && <p className="text-xs text-gray-500 mb-4">Total: <span className="font-bold text-gray-800">₹{(displayPrice * qty).toLocaleString("en-IN")}</span></p>}
 
-            <button onClick={handleAddToCart} disabled={!product.inStock}
+            <button onClick={handleAddToCart} disabled={!displayInStock || (product?.has_variants && !selectedVariant)}
               className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl text-base font-bold transition-all duration-300 mb-3
-                ${added ? "bg-green-500 text-white scale-95" : product.inStock ? "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg active:scale-95" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}>
+                ${added ? "bg-green-500 text-white scale-95" : (displayInStock && (!product?.has_variants || selectedVariant)) ? "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg active:scale-95" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}>
               <ShoppingCart className="w-5 h-5" />
-              {added ? `Added ${qty > 1 ? `(${qty})` : ""} to Cart!` : product.inStock ? "Add to Cart" : "Out of Stock"}
+              {added ? `Added ${qty > 1 ? `(${qty})` : ""} to Cart!` : displayInStock ? "Add to Cart" : "Out of Stock"}
             </button>
             <button onClick={() => navigate(-1)} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-gray-600 border border-gray-200 hover:border-blue-400 hover:text-blue-600 transition-colors">
               <ArrowLeft className="w-4 h-4" /> Back
