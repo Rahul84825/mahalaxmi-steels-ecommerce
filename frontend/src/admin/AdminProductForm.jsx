@@ -32,6 +32,12 @@ const AdminProductForm = ({ mode = "add" }) => {
     if (mode === "edit" && id && !formPopulated.current) {
       const product = products.find((p) => (p._id || p.id) === id);
       if (product) {
+        const normalizedVariants = (product.variants || []).map((variant, index) => ({
+          ...variant,
+          _localKey: variant._id || variant.id || `variant-${Date.now()}-${index}`,
+          images: Array.isArray(variant.images) ? variant.images : [],
+        }));
+
         setForm({
           name:        product.name        || "",
           category:    product.category?._id || product.category || "",
@@ -45,7 +51,7 @@ const AdminProductForm = ({ mode = "add" }) => {
           stock:       product.stock       || "",
           tags:        (product.tags || []).join(", "),
           has_variants: product.has_variants || false,
-          variants:    product.variants || [],
+          variants:    normalizedVariants,
         });
         formPopulated.current = true;  
       }
@@ -152,7 +158,20 @@ const AdminProductForm = ({ mode = "add" }) => {
       images:        form.images || [],
       inStock:      form.inStock,
       has_variants: form.has_variants,
-      variants:     form.has_variants ? (form.variants || []) : [],
+      variants:     form.has_variants
+        ? (form.variants || [])
+            .map((v) => ({
+              ...(v._id ? { _id: v._id } : {}),
+              label: (v.label || "").trim(),
+              price: +v.price || 0,
+              mrp: v.mrp !== undefined && v.mrp !== "" ? +v.mrp : undefined,
+              stock: +v.stock || 0,
+              images: Array.isArray(v.images)
+                ? v.images.map((img) => String(img || "").trim()).filter(Boolean)
+                : [],
+            }))
+            .filter((v) => v.label && v.price > 0)
+        : [],
     };
 
     setSubmitting(true);
@@ -171,26 +190,34 @@ const AdminProductForm = ({ mode = "add" }) => {
     }
   };
 
+  const getVariantKey = (variant) => variant?._localKey || variant?._id || variant?.id;
+
   const addVariant = () => {
-    const newVariant = { id: Date.now(), label: "", price: form.price, stock: 0 };
+    const newVariant = {
+      _localKey: `variant-${Date.now()}`,
+      label: "",
+      price: form.price,
+      stock: 0,
+      images: [],
+    };
     setForm((prev) => ({
       ...prev,
       variants: [...(prev.variants || []), newVariant],
     }));
   };
 
-  const deleteVariant = (id) => {
+  const deleteVariant = (variantKey) => {
     setForm((prev) => ({
       ...prev,
-      variants: (prev.variants || []).filter((v) => v.id !== id),
+      variants: (prev.variants || []).filter((v) => getVariantKey(v) !== variantKey),
     }));
   };
 
-  const updateVariant = (id, field, value) => {
+  const updateVariant = (variantKey, field, value) => {
     setForm((prev) => ({
       ...prev,
       variants: (prev.variants || []).map((v) =>
-        v.id === id ? { ...v, [field]: value } : v
+        getVariantKey(v) === variantKey ? { ...v, [field]: value } : v
       ),
     }));
   };
@@ -396,25 +423,39 @@ const AdminProductForm = ({ mode = "add" }) => {
                 <p className="text-xs font-medium text-blue-600 text-center py-2">No variants yet. Click "Add Variant" to create one.</p>
               ) : (
                 <div className="space-y-2.5">
-                  {form.variants.map((variant, idx) => (
-                    <div key={variant.id || idx} className="flex gap-2.5 items-end">
-                      <div className="flex-1">
+                  {form.variants.map((variant, idx) => {
+                    const variantKey = getVariantKey(variant) || `variant-fallback-${idx}`;
+                    return (
+                    <div key={variantKey} className="space-y-2 rounded-xl border border-blue-100 bg-white p-3">
+                      <div className="flex gap-2.5 items-end">
+                        <div className="flex-1">
                         <label className="block text-[11px] font-bold text-slate-600 mb-1">Label <span className="text-rose-500">*</span></label>
-                        <input type="text" placeholder="e.g. 1L, 3L, Red, Small" value={variant.label || ""} onChange={(e) => updateVariant(variant.id || idx, "label", e.target.value)} className={`${inputClass(false)} text-xs`} />
-                      </div>
-                      <div className="w-24">
+                          <input type="text" placeholder="e.g. 1L, 3L, Red, Small" value={variant.label || ""} onChange={(e) => updateVariant(variantKey, "label", e.target.value)} className={`${inputClass(false)} text-xs`} />
+                        </div>
+                        <div className="w-24">
                         <label className="block text-[11px] font-bold text-slate-600 mb-1">Price (₹)</label>
-                        <input type="number" placeholder="899" value={variant.price || ""} onChange={(e) => updateVariant(variant.id || idx, "price", +e.target.value)} className={`${inputClass(false)} text-xs`} />
-                      </div>
-                      <div className="w-24">
+                          <input type="number" placeholder="899" value={variant.price || ""} onChange={(e) => updateVariant(variantKey, "price", +e.target.value)} className={`${inputClass(false)} text-xs`} />
+                        </div>
+                        <div className="w-24">
                         <label className="block text-[11px] font-bold text-slate-600 mb-1">Stock</label>
-                        <input type="number" placeholder="10" value={variant.stock || 0} onChange={(e) => updateVariant(variant.id || idx, "stock", +e.target.value)} className={`${inputClass(false)} text-xs`} />
+                          <input type="number" placeholder="10" value={variant.stock || 0} onChange={(e) => updateVariant(variantKey, "stock", +e.target.value)} className={`${inputClass(false)} text-xs`} />
+                        </div>
+                        <button type="button" onClick={() => deleteVariant(variantKey)} className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-lg transition mb-1">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
-                      <button type="button" onClick={() => deleteVariant(variant.id || idx)} className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-lg transition mb-1">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Variant Image URLs <span className="text-slate-400 font-medium">(comma separated)</span></label>
+                        <input
+                          type="text"
+                          placeholder="https://.../1.jpg, https://.../2.jpg"
+                          value={Array.isArray(variant.images) ? variant.images.join(", ") : ""}
+                          onChange={(e) => updateVariant(variantKey, "images", e.target.value.split(",").map((img) => img.trim()).filter(Boolean))}
+                          className={`${inputClass(false)} text-xs`}
+                        />
+                      </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
               )}
             </div>

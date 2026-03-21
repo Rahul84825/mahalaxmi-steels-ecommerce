@@ -192,7 +192,7 @@ const OrderSummary = ({ cartItems, cartTotal, codFee = 0 }) => {
           const qty = toNumber(item.quantity ?? item.qty ?? 1, 1);
           const linePrice = Math.round(toNumber(item.price) * qty);
           return (
-            <div key={item._id || item.id} className="flex items-center gap-3">
+            <div key={`${item._id || item.id}-${item.variant_id || "base"}`} className="flex items-center gap-3">
               <div className="w-8 h-8 flex-shrink-0 rounded bg-gray-100 flex items-center justify-center overflow-hidden">
                 {canRender ? (
                   <img src={imageSrc} alt={item.name || "Product"} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
@@ -202,6 +202,7 @@ const OrderSummary = ({ cartItems, cartTotal, codFee = 0 }) => {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-gray-800 line-clamp-1">{item.name}</p>
+                {item.variant?.label && <p className="text-[11px] text-blue-600 font-medium">Variant: {item.variant.label}</p>}
                 <p className="text-xs text-gray-400">Qty: {qty}</p>
               </div>
               <p className="text-xs font-bold text-gray-900 flex-shrink-0">₹{linePrice.toLocaleString("en-IN")}</p>

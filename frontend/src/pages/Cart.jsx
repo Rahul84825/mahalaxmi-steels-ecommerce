@@ -18,6 +18,7 @@ const CartItem = ({ item }) => {
   const { updateQuantity, removeFromCart } = useCart();
   const { categories } = useProducts();
   const id = item._id || item.id;
+  const variantId = item.variant_id || null;
   const originalPrice = item.originalPrice || item.mrp || item.price;
   const savings = Math.round(originalPrice - item.price);
   const discountPct = originalPrice > item.price ? Math.round((savings / originalPrice) * 100) : 0;
@@ -52,8 +53,13 @@ const CartItem = ({ item }) => {
             <h3 className="mt-2 text-sm sm:text-base font-semibold text-slate-800 leading-snug line-clamp-2">
               {item.name}
             </h3>
+            {item.variant?.label && (
+              <p className="mt-1 text-xs font-semibold text-blue-700 bg-blue-50 inline-flex px-2 py-0.5 rounded-full border border-blue-100">
+                Variant: {item.variant.label}
+              </p>
+            )}
           </div>
-          <button onClick={() => removeFromCart(id)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-colors flex-shrink-0" title="Remove item">
+          <button onClick={() => removeFromCart(id, variantId)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-colors flex-shrink-0" title="Remove item">
             <Trash2 size={16} />
           </button>
         </div>
@@ -78,9 +84,9 @@ const CartItem = ({ item }) => {
         {/* ── Controls & Status ── */}
         <div className="mt-4 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center bg-white border border-slate-200 rounded-full h-8 shadow-sm">
-            <button onClick={() => updateQuantity(id, item.quantity - 1)} disabled={item.quantity <= 1} className="w-8 h-full flex items-center justify-center text-slate-500 hover:text-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><Minus size={14} /></button>
+            <button onClick={() => updateQuantity(id, item.quantity - 1, variantId)} disabled={item.quantity <= 1} className="w-8 h-full flex items-center justify-center text-slate-500 hover:text-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><Minus size={14} /></button>
             <span className="text-sm font-medium text-slate-700 min-w-[32px] text-center select-none">{item.quantity}</span>
-            <button onClick={() => updateQuantity(id, item.quantity + 1)} disabled={item.quantity >= 10} className="w-8 h-full flex items-center justify-center text-slate-500 hover:text-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><Plus size={14} /></button>
+            <button onClick={() => updateQuantity(id, item.quantity + 1, variantId)} disabled={item.quantity >= 10} className="w-8 h-full flex items-center justify-center text-slate-500 hover:text-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><Plus size={14} /></button>
           </div>
 
           <div className="flex flex-col items-end">
@@ -148,7 +154,7 @@ const Cart = () => {
                 <span>You're saving <span className="font-semibold">₹{totalSavings.toLocaleString()}</span> on this order 🎉</span>
               </div>
             )}
-            {cartItems.map((item) => <CartItem key={item._id || item.id} item={item} />)}
+            {cartItems.map((item) => <CartItem key={`${item._id || item.id}-${item.variant_id || "base"}`} item={item} />)}
           </div>
 
           {/* ── Order Summary (Sticky) ── */}

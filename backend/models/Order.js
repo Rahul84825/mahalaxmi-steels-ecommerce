@@ -2,6 +2,8 @@ const mongoose = require("mongoose");
 
 const orderItemSchema = new mongoose.Schema({
   productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+  variantId: { type: mongoose.Schema.Types.ObjectId, ref: "Variant", default: null },
+  variantLabel: { type: String, default: "" },
   name:      { type: String, required: true },
   image:     { type: String },
   category:  { type: String },

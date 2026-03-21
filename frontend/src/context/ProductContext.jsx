@@ -306,6 +306,8 @@ export const ProductProvider = ({ children }) => {
       },
       items: cartItems.map((i) => ({
         productId: i._id || i.id,
+        variantId: i.variant_id || null,
+        variantLabel: i.variant?.label || "",
         name:      i.name,
         image:     i.image,
         category:  typeof i.category === "object" ? i.category?.id || i.category?._id : i.category,

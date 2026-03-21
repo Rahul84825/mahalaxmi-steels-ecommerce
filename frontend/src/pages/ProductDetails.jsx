@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft, ShoppingCart, Star, BadgeCheck,
@@ -53,6 +53,23 @@ const ProductDetails = () => {
     markProductViewed(product._id || product.id);
   }, [product, markProductViewed]);
 
+  useEffect(() => {
+    if (!product) return;
+
+    const safeVariants = Array.isArray(product.variants) ? product.variants : [];
+    if (!product.has_variants || safeVariants.length === 0) {
+      setSelectedVariant(null);
+      setActiveImg(0);
+      setImgErrors({});
+      return;
+    }
+
+    const firstAvailable = safeVariants.find((v) => Number(v?.stock || 0) > 0) || safeVariants[0];
+    setSelectedVariant(firstAvailable || null);
+    setActiveImg(0);
+    setImgErrors({});
+  }, [product]);
+
   async function fetchProduct() {
     setLoading(true); setError(false);
     try {
@@ -71,19 +88,25 @@ const ProductDetails = () => {
   }
 
   const handleAddToCart = () => {
-    // If product has variants, require selection
-    if (product?.has_variants && !selectedVariant) {
+    const safeVariants = Array.isArray(product?.variants) ? product.variants : [];
+    const hasVariants = !!product?.has_variants && safeVariants.length > 0;
+    const activeVariant = hasVariants
+      ? safeVariants.find((v) => (v._id || v.id) === (selectedVariant?._id || selectedVariant?.id))
+      : null;
+    const stock = hasVariants ? Number(activeVariant?.stock ?? 0) : Number(product?.stock ?? 0);
+
+    if (hasVariants && !activeVariant) {
       alert("Please select a variant");
       return;
     }
-    
-    if (!product?.inStock && (!selectedVariant || selectedVariant?.stock <= 0)) {
+
+    if (stock <= 0) {
       alert("Out of stock");
       return;
     }
-    
+
     for (let i = 0; i < qty; i++) {
-      addToCart(product, selectedVariant);
+      addToCart(product, activeVariant || null);
     }
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
@@ -92,20 +115,37 @@ const ProductDetails = () => {
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" /></div>;
   if (error || !product) return <ProductNotFound />;
 
-  // Build gallery: primary `image` first, then unique valid entries from `images[]`
+  const safeVariants = useMemo(() => (Array.isArray(product.variants) ? product.variants : []), [product.variants]);
+  const hasVariants = !!product.has_variants && safeVariants.length > 0;
+  const normalizedSelectedVariant = hasVariants
+    ? safeVariants.find((v) => (v._id || v.id) === (selectedVariant?._id || selectedVariant?.id)) || null
+    : null;
+
+  // Build gallery: selected variant images first, then product-level images.
   const allImages = [];
-  if (product.image && product.image.startsWith("http")) allImages.push(product.image);
+  if (normalizedSelectedVariant?.images?.length) {
+    normalizedSelectedVariant.images.forEach((img) => {
+      if (img && img.startsWith("http") && !allImages.includes(img)) allImages.push(img);
+    });
+  }
+  if (product.image && product.image.startsWith("http") && !allImages.includes(product.image)) {
+    allImages.push(product.image);
+  }
   if (product.images?.length) {
     product.images.forEach((img) => {
       if (img && img.startsWith("http") && !allImages.includes(img)) allImages.push(img);
     });
   }
+
   const hasImages = allImages.length > 0;
-  const currentSrc = hasImages && !imgErrors[activeImg] ? allImages[activeImg] : null;
+  const safeActiveImg = activeImg >= 0 && activeImg < allImages.length ? activeImg : 0;
+  const currentSrc = hasImages && !imgErrors[safeActiveImg] ? allImages[safeActiveImg] : null;
   const isEmojiImage = product.image && !product.image.startsWith("http");
-  const mrp = product.mrp || product.originalPrice || 0;
-  const discount = mrp > product.price ? Math.round(((mrp - product.price) / mrp) * 100) : 0;
-  const savings = mrp > product.price ? Math.round(mrp - product.price) : 0;
+
+  const displayPrice = Math.round(normalizedSelectedVariant?.price ?? product.price ?? 0);
+  const displayMrp = Math.round(normalizedSelectedVariant?.mrp ?? product.mrp ?? product.originalPrice ?? displayPrice);
+  const discount = displayMrp > displayPrice ? Math.round(((displayMrp - displayPrice) / displayMrp) * 100) : 0;
+  const savings = displayMrp > displayPrice ? Math.round(displayMrp - displayPrice) : 0;
   const categoryLabel = getCategoryLabel(product.category, categories);
   const categorySlug  = getCategorySlug(product.category, categories);
   const specs = product.specifications
@@ -115,10 +155,11 @@ const ProductDetails = () => {
   // rating > 0 to avoid rendering "0"
   const hasRating = product.rating > 0;
   
-  // Use variant price and info if selected, otherwise use product price
-  const displayPrice = selectedVariant?.price ?? product.price;
-  const displayStock = selectedVariant?.stock ?? product.stock;
-  const displayInStock = product.has_variants ? (selectedVariant?.stock > 0) : product.inStock;
+  // For variant products, stock must come from selected variant.
+  const variantStock = Number(normalizedSelectedVariant?.stock ?? 0);
+  const productStock = Number(product.stock ?? 0);
+  const displayStock = hasVariants ? variantStock : productStock;
+  const displayInStock = hasVariants ? displayStock > 0 : (product.inStock ?? displayStock > 0);
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -143,10 +184,10 @@ const ProductDetails = () => {
             <div className="relative bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden aspect-square flex items-center justify-center group">
               <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
                 {discount > 0 && <span className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">-{discount}%</span>}
-                {!product.inStock && <span className="bg-gray-400 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">Sold Out</span>}
+                {!displayInStock && <span className="bg-gray-400 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">Sold Out</span>}
               </div>
               {currentSrc ? (
-                <img src={currentSrc} alt={product.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" onError={() => setImgErrors((p) => ({ ...p, [activeImg]: true }))} />
+                <img src={currentSrc} alt={product.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 cursor-zoom-in" loading="lazy" onError={() => setImgErrors((p) => ({ ...p, [safeActiveImg]: true }))} />
               ) : isEmojiImage ? (
                 <span className="text-[120px] select-none">{product.image}</span>
               ) : (
@@ -189,8 +230,8 @@ const ProductDetails = () => {
 
             <div className="flex items-baseline gap-3 mb-2">
               <span className="text-3xl font-bold text-gray-900">₹{displayPrice.toLocaleString("en-IN")}</span>
-              {mrp > displayPrice && (
-                <span className="text-lg text-gray-400 line-through">₹{mrp.toLocaleString("en-IN")}</span>
+              {displayMrp > displayPrice && (
+                <span className="text-lg text-gray-400 line-through">₹{displayMrp.toLocaleString("en-IN")}</span>
               )}
             </div>
             {savings > 0 && <p className="text-sm font-semibold text-green-600 mb-4">You save ₹{savings.toLocaleString("en-IN")} ({discount}% off)</p>}
@@ -198,24 +239,31 @@ const ProductDetails = () => {
             <div className="flex items-center gap-2 mb-6">
               <span className={`w-2.5 h-2.5 rounded-full ${displayInStock ? "bg-green-500" : "bg-red-400"}`} />
               <span className={`text-sm font-semibold ${displayInStock ? "text-green-600" : "text-red-500"}`}>
-                {displayInStock ? "In Stock — Ready to Ship" : "Out of Stock"}
+                {displayInStock ? `In Stock${displayStock ? ` - ${displayStock} available` : ""}` : "Out of Stock"}
               </span>
             </div>
 
             {product.description && <p className="text-sm text-gray-600 leading-relaxed mb-6 border-t border-gray-100 pt-5">{product.description}</p>}
 
             {/* Variant Selection */}
-            {product.has_variants && product.variants && product.variants.length > 0 && (
+            {hasVariants && (
               <div className="mb-6 pb-6 border-b border-gray-200">
-                <label className="block text-sm font-bold text-gray-700 mb-3">Select Size:</label>
+                <label className="block text-sm font-bold text-gray-700 mb-3">Select Variant:</label>
                 <div className="flex flex-wrap gap-3">
-                  {product.variants.map((variant) => {
-                    const isSelected = selectedVariant?._id === variant._id;
-                    const isOutOfStock = variant.stock <= 0;
+                  {safeVariants.map((variant) => {
+                    const variantId = variant._id || variant.id;
+                    const selectedId = normalizedSelectedVariant?._id || normalizedSelectedVariant?.id;
+                    const isSelected = selectedId === variantId;
+                    const isOutOfStock = Number(variant.stock || 0) <= 0;
                     return (
                       <button
-                        key={variant._id}
-                        onClick={() => !isOutOfStock && setSelectedVariant(variant)}
+                        key={variantId}
+                        onClick={() => {
+                          if (isOutOfStock) return;
+                          setSelectedVariant(variant);
+                          setActiveImg(0);
+                          setImgErrors({});
+                        }}
                         disabled={isOutOfStock}
                         className={`px-4 py-2 rounded-lg border-2 font-semibold transition-all text-sm
                           ${isSelected 
@@ -231,10 +279,10 @@ const ProductDetails = () => {
                     );
                   })}
                 </div>
-                {selectedVariant && (
+                {normalizedSelectedVariant && (
                   <p className="text-xs text-gray-600 mt-3">
-                    Stock: <span className={selectedVariant.stock > 0 ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
-                      {selectedVariant.stock > 0 ? `${selectedVariant.stock} available` : "Out of stock"}
+                    Stock: <span className={displayStock > 0 ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
+                      {displayStock > 0 ? `${displayStock} available` : "Out of stock"}
                     </span>
                   </p>
                 )}
@@ -254,9 +302,9 @@ const ProductDetails = () => {
             )}
             {displayInStock && qty > 1 && <p className="text-xs text-gray-500 mb-4">Total: <span className="font-bold text-gray-800">₹{(displayPrice * qty).toLocaleString("en-IN")}</span></p>}
 
-            <button onClick={handleAddToCart} disabled={!displayInStock || (product?.has_variants && !selectedVariant)}
+            <button onClick={handleAddToCart} disabled={!displayInStock || (hasVariants && !normalizedSelectedVariant)}
               className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl text-base font-bold transition-all duration-300 mb-3
-                ${added ? "bg-green-500 text-white scale-95" : (displayInStock && (!product?.has_variants || selectedVariant)) ? "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg active:scale-95" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}>
+                ${added ? "bg-green-500 text-white scale-95" : (displayInStock && (!hasVariants || normalizedSelectedVariant)) ? "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg active:scale-95" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}>
               <ShoppingCart className="w-5 h-5" />
               {added ? `Added ${qty > 1 ? `(${qty})` : ""} to Cart!` : displayInStock ? "Add to Cart" : "Out of Stock"}
             </button>

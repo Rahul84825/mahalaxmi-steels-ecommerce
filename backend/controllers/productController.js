@@ -44,6 +44,13 @@ const normalizeImageArray = (images, image) => {
   return normalized;
 };
 
+const normalizeVariantImages = (images) => {
+  if (!Array.isArray(images)) return [];
+  return images
+    .map((img) => (typeof img === "string" ? img.trim() : ""))
+    .filter(Boolean);
+};
+
 // ── GET /api/products ─────────────────────────────────────────────────────────
 const getProducts = asyncHandler(async (req, res) => {
   const { category, search, sortBy, inStockOnly, page = 1, limit = 50 } = req.query;
@@ -153,6 +160,7 @@ const createProduct = asyncHandler(async (req, res) => {
         mrp: v.mrp ? Math.round(+v.mrp) : undefined,
         stock: v.stock !== undefined ? +v.stock : 0,
         barcode: v.barcode || "",
+        images: normalizeVariantImages(v.images),
       }))
     );
   }
@@ -214,6 +222,7 @@ const updateProduct = asyncHandler(async (req, res) => {
           mrp: v.mrp ? Math.round(+v.mrp) : undefined,
           stock: v.stock !== undefined ? +v.stock : 0,
           barcode: v.barcode || "",
+          images: normalizeVariantImages(v.images),
         }))
       );
     }
@@ -252,7 +261,7 @@ const createVariant = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id);
   if (!product) { res.status(404); throw new Error("Product not found"); }
 
-  const { label, price, mrp, stock, barcode } = req.body;
+  const { label, price, mrp, stock, barcode, images } = req.body;
   if (!label || price === undefined) {
     res.status(400);
     throw new Error("label and price are required");
@@ -265,6 +274,7 @@ const createVariant = asyncHandler(async (req, res) => {
     mrp: mrp ? Math.round(+mrp) : undefined,
     stock: stock !== undefined ? +stock : 0,
     barcode: barcode || "",
+    images: normalizeVariantImages(images),
   });
 
   res.status(201).json(variant);
@@ -275,13 +285,15 @@ const updateVariant = asyncHandler(async (req, res) => {
   const variant = await Variant.findById(req.params.id);
   if (!variant) { res.status(404); throw new Error("Variant not found"); }
 
-  const fields = ["label", "price", "mrp", "stock", "barcode"];
+  const fields = ["label", "price", "mrp", "stock", "barcode", "images"];
   fields.forEach((f) => {
     if (req.body[f] !== undefined) {
       if (f === "price" || f === "mrp") {
         variant[f] = Math.round(+req.body[f]);
       } else if (f === "stock") {
         variant[f] = +req.body[f];
+      } else if (f === "images") {
+        variant.images = normalizeVariantImages(req.body.images);
       } else {
         variant[f] = req.body[f];
       }

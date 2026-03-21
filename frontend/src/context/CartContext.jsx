@@ -6,6 +6,8 @@ const CartContext = createContext(null);
 export const CartProvider = ({ children }) => {
   const { user, loading: authLoading } = useAuth();
 
+  const getItemKey = (itemId, variantId = null) => (variantId ? `${itemId}-${variantId}` : `${itemId}`);
+
   // ── Derive a stable storage key per user ──────────────────────────
   // - Logged in  → "cart_<userId>"   (each user gets their own cart)
   // - Guest      → "cart_guest"      (shared guest cart)
@@ -78,6 +80,7 @@ export const CartProvider = ({ children }) => {
         ...prev,
         {
           ...product,
+          product_id: productId,
           variant_id: variantId,
           variant: variant || null,
           quantity: 1,
@@ -91,11 +94,12 @@ export const CartProvider = ({ children }) => {
   };
 
   // ── Change quantity ───────────────────────────────────────────────
-  const updateQuantity = (id, newQty) => {
-    if (newQty < 1) { removeFromCart(id); return; }
+  const updateQuantity = (id, newQty, variantId = null) => {
+    if (newQty < 1) { removeFromCart(id, variantId); return; }
+    const targetKey = getItemKey(id, variantId);
     setCartItems((prev) =>
       prev.map((item) =>
-        (item._id || item.id) === id
+        getItemKey(item._id || item.id, item.variant_id || null) === targetKey
           ? { ...item, quantity: Math.min(newQty, 10) }
           : item
       )
@@ -103,9 +107,10 @@ export const CartProvider = ({ children }) => {
   };
 
   // ── Remove item ───────────────────────────────────────────────────
-  const removeFromCart = (id) =>
+  const removeFromCart = (id, variantId = null) =>
     setCartItems((prev) => {
-      const next = prev.filter((item) => (item._id || item.id) !== id);
+      const targetKey = getItemKey(id, variantId);
+      const next = prev.filter((item) => getItemKey(item._id || item.id, item.variant_id || null) !== targetKey);
       return next;
     });
 
@@ -115,7 +120,10 @@ export const CartProvider = ({ children }) => {
   // ── Derived values ────────────────────────────────────────────────
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const cartTotal = Math.round(cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0));
-  const isInCart  = (id) => cartItems.some((item) => (item._id || item.id) === id);
+  const isInCart  = (id, variantId = null) => {
+    const targetKey = getItemKey(id, variantId);
+    return cartItems.some((item) => getItemKey(item._id || item.id, item.variant_id || null) === targetKey);
+  };
 
   return (
     <CartContext.Provider value={{

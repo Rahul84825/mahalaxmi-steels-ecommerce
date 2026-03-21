@@ -8,6 +8,7 @@ const variantSchema = new mongoose.Schema(
     mrp:        { type: Number, min: 0 },  // optional original price for variant
     stock:      { type: Number, default: 0, min: 0 },
     barcode:    { type: String, default: "" },  // optional barcode for variant
+    images:     [{ type: String, trim: true }],
   },
   { timestamps: true }
 );
