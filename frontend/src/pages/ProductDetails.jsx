@@ -25,7 +25,7 @@ const ProductNotFound = () => (
 const ProductDetails = () => {
   const { id }   = useParams();
   const navigate = useNavigate();
-  const { addToCart }   = useCart();
+  const { addToCart, cartItems }   = useCart();
   const { categories, markProductViewed }  = useProducts();
 
   const [product, setProduct]     = useState(null);
@@ -67,17 +67,21 @@ const ProductDetails = () => {
     finally { setLoading(false); }
   }
 
-  const handleAddToCart = () => {
-    const stock = Number(product?.stock ?? 0);
+  const productStock = Number(product?.stock ?? 0);
+  const cartQty = (cartItems || [])
+    .filter((item) => (item._id || item.id) === (product?._id || product?.id))
+    .reduce((sum, item) => sum + (item.quantity || 1), 0);
+  const remainingStock = Math.max(0, productStock - cartQty);
 
-    if (stock <= 0) {
-      alert("Out of stock");
+  const handleAddToCart = () => {
+    if (remainingStock <= 0) {
+      alert("Max items already added to cart");
       return;
     }
     
     const currentQty = Number(qty) || 1;
-    if (currentQty > stock) {
-      alert(`Only ${stock} items available`);
+    if (currentQty > remainingStock) {
+      alert(`Only ${remainingStock} items available`);
       return;
     }
 
@@ -117,7 +121,6 @@ const ProductDetails = () => {
     ? Object.entries(product.specifications).map(([label, value]) => ({ label, value }))
     : [];
 
-  const productStock = Number(product.stock ?? 0);
   const displayStock = productStock;
   const displayInStock = product.inStock ?? productStock > 0;
 
@@ -199,11 +202,11 @@ const ProductDetails = () => {
               <div className="flex items-center gap-4 mb-5">
                 <span className="text-sm font-semibold text-gray-700">Quantity:</span>
                 <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
-                  <button onClick={() => setQty((q) => Math.max(1, (Number(q) || 1) - 1))} disabled={qty <= 1} className="px-3 py-2 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><Minus className="w-4 h-4" /></button>
+                  <button onClick={() => setQty((q) => Math.max(1, (Number(q) || 1) - 1))} disabled={qty <= 1 || remainingStock <= 0} className="px-3 py-2 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><Minus className="w-4 h-4" /></button>
                   <input
                     type="number"
                     min="1"
-                    max={Math.min(productStock, 10)}
+                    max={Math.max(1, Math.min(remainingStock, 10))}
                     value={qty}
                     onChange={(e) => {
                       const val = parseInt(e.target.value, 10);
@@ -213,28 +216,33 @@ const ProductDetails = () => {
                     onBlur={() => {
                       const val = Number(qty);
                       if (!val || val < 1) setQty(1);
-                      else if (val > Math.min(productStock, 10)) setQty(Math.min(productStock, 10));
+                      else if (val > Math.max(1, Math.min(remainingStock, 10))) setQty(Math.max(1, Math.min(remainingStock, 10)));
                     }}
+                    disabled={remainingStock <= 0}
                     className="w-14 text-center text-sm font-bold text-gray-800 border-x border-gray-200 py-2 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
-                  <button onClick={() => setQty((q) => Math.min(Math.min(productStock, 10), (Number(q) || 0) + 1))} disabled={qty >= Math.min(productStock, 10)} className="px-3 py-2 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><Plus className="w-4 h-4" /></button>
+                  <button onClick={() => setQty((q) => Math.min(Math.max(1, Math.min(remainingStock, 10)), (Number(q) || 0) + 1))} disabled={qty >= Math.min(remainingStock, 10) || remainingStock <= 0} className="px-3 py-2 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><Plus className="w-4 h-4" /></button>
                 </div>
                 <span className="text-xs text-gray-400">Max {Math.min(productStock, 10)} per order</span>
               </div>
             )}
             {displayInStock && qty > 1 && <p className="text-xs text-gray-500 mb-4">Total: <span className="font-bold text-gray-800">₹{(displayPrice * qty).toLocaleString("en-IN")}</span></p>}
 
-            {displayInStock && Number(qty) > productStock && (
+            {displayInStock && remainingStock <= 0 ? (
               <p className="text-sm font-semibold text-rose-500 mb-4">
-                Only {productStock} items available in stock.
+                You already added {cartQty} items (maximum available).
+              </p>
+            ) : displayInStock && Number(qty) > remainingStock && (
+              <p className="text-sm font-semibold text-rose-500 mb-4">
+                Only {remainingStock} items available in stock.
               </p>
             )}
 
-            <button onClick={handleAddToCart} disabled={!displayInStock || Number(qty) > productStock || Number(qty) < 1}
+            <button onClick={handleAddToCart} disabled={!displayInStock || remainingStock <= 0 || Number(qty) > remainingStock || Number(qty) < 1}
               className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl text-base font-bold transition-all duration-300 mb-3
-                ${added ? "bg-green-500 text-white scale-95" : displayInStock && Number(qty) <= productStock && Number(qty) >= 1 ? "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg active:scale-95" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}>
+                ${added ? "bg-green-500 text-white scale-95" : displayInStock && remainingStock > 0 && Number(qty) <= remainingStock && Number(qty) >= 1 ? "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg active:scale-95" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}>
               <ShoppingCart className="w-5 h-5" />
-              {added ? `Added ${qty > 1 ? `(${qty})` : ""} to Cart!` : displayInStock ? (Number(qty) > productStock ? `Only ${productStock} available` : "Add to Cart") : "Out of Stock"}
+              {added ? `Added ${qty > 1 ? `(${qty})` : ""} to Cart!` : !displayInStock ? "Out of Stock" : remainingStock <= 0 ? "Max items added" : Number(qty) > remainingStock ? `Only ${remainingStock} available` : "Add to Cart"}
             </button>
             <button onClick={() => navigate(-1)} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-gray-600 border border-gray-200 hover:border-blue-400 hover:text-blue-600 transition-colors">
               <ArrowLeft className="w-4 h-4" /> Back
