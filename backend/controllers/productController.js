@@ -73,7 +73,6 @@ const getProducts = asyncHandler(async (req, res) => {
   const sortMap = {
     "price-low":  { price: 1 },
     "price-high": { price: -1 },
-    "rating":     { rating: -1 },
     "newest":     { createdAt: -1 },
     "default":    { createdAt: -1 },
   };
