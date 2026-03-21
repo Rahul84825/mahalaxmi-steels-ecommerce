@@ -146,6 +146,9 @@ const ProductDetails = () => {
     ? (normalizedSelectedVariant ? displayStock > 0 : false)
     : (product.inStock ?? productStock > 0);
 
+  const allVariantsOutOfStock = hasVariants ? safeVariants.every((v) => Number(v.stock || 0) <= 0) : false;
+  const isEntirelyOutOfStock = hasVariants ? allVariantsOutOfStock : !(product.inStock ?? productStock > 0);
+
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -169,7 +172,7 @@ const ProductDetails = () => {
             <div className="relative bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden aspect-square flex items-center justify-center group">
               <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
                 {discount > 0 && <span className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">-{discount}%</span>}
-                {!displayInStock && <span className="bg-gray-400 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">Sold Out</span>}
+              {isEntirelyOutOfStock && <span className="bg-gray-400 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">Sold Out</span>}
               </div>
               {currentSrc ? (
                 <img src={currentSrc} alt={product.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 cursor-zoom-in" loading="lazy" onError={() => setImgErrors((p) => ({ ...p, [safeActiveImg]: true }))} />
