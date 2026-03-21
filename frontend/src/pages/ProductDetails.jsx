@@ -207,7 +207,7 @@ const ProductDetails = () => {
                     type="number"
                     min="1"
                     max={Math.max(1, Math.min(remainingStock, 10))}
-                    value={qty}
+                    value={remainingStock <= 0 ? 0 : qty}
                     onChange={(e) => {
                       const val = parseInt(e.target.value, 10);
                       if (!isNaN(val)) setQty(val);
@@ -234,7 +234,7 @@ const ProductDetails = () => {
               </p>
             ) : displayInStock && Number(qty) > remainingStock && (
               <p className="text-sm font-semibold text-rose-500 mb-4">
-                Only {remainingStock} items available in stock.
+                Only {remainingStock} left in stock.
               </p>
             )}
 
@@ -242,7 +242,7 @@ const ProductDetails = () => {
               className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl text-base font-bold transition-all duration-300 mb-3
                 ${added ? "bg-green-500 text-white scale-95" : displayInStock && remainingStock > 0 && Number(qty) <= remainingStock && Number(qty) >= 1 ? "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg active:scale-95" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}>
               <ShoppingCart className="w-5 h-5" />
-              {added ? `Added ${qty > 1 ? `(${qty})` : ""} to Cart!` : !displayInStock ? "Out of Stock" : remainingStock <= 0 ? "Max items added" : Number(qty) > remainingStock ? `Only ${remainingStock} available` : "Add to Cart"}
+              {added ? `Added ${qty > 1 ? `(${qty})` : ""} to Cart!` : !displayInStock ? "Out of Stock" : remainingStock <= 0 ? "Max items added" : Number(qty) > remainingStock ? `Only ${remainingStock} left` : "Add to Cart"}
             </button>
             <button onClick={() => navigate(-1)} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-gray-600 border border-gray-200 hover:border-blue-400 hover:text-blue-600 transition-colors">
               <ArrowLeft className="w-4 h-4" /> Back

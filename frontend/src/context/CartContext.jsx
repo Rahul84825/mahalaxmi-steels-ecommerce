@@ -62,9 +62,11 @@ export const CartProvider = ({ children }) => {
         return itemKey === cartItemKey;
       });
       
+      const maxAllowed = product.stock ? Math.min(10, product.stock) : 10;
+      
       if (existingIndex >= 0) {
         const updated = [...prev];
-        updated[existingIndex].quantity = Math.min(updated[existingIndex].quantity + 1, 10);
+        updated[existingIndex].quantity = Math.min(updated[existingIndex].quantity + 1, maxAllowed);
         return updated;
       }
       
@@ -91,11 +93,13 @@ export const CartProvider = ({ children }) => {
     if (newQty < 1) { removeFromCart(id); return; }
     const targetKey = getItemKey(id);
     setCartItems((prev) =>
-      prev.map((item) =>
-        getItemKey(item._id || item.id) === targetKey
-          ? { ...item, quantity: Math.min(newQty, 10) }
-          : item
-      )
+      prev.map((item) => {
+        if (getItemKey(item._id || item.id) === targetKey) {
+          const maxAllowed = item.stock ? Math.min(10, item.stock) : 10;
+          return { ...item, quantity: Math.min(newQty, maxAllowed) };
+        }
+        return item;
+      })
     );
   };
 

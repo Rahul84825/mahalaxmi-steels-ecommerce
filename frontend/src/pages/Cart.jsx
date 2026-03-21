@@ -27,6 +27,9 @@ const CartItem = ({ item }) => {
   const categoryLabel = getCategoryLabel(item.category, categories);
   const hasRealImage = item.image && item.image.startsWith("http");
 
+  const maxAllowed = item.stock ? Math.min(10, item.stock) : 10;
+  const isMaxReached = item.quantity >= maxAllowed;
+
   return (
     <div className="flex gap-4 sm:gap-6 p-4 sm:p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300">
       
@@ -87,12 +90,18 @@ const CartItem = ({ item }) => {
           <div className="flex items-center bg-white border border-slate-200 rounded-full h-8 shadow-sm">
             <button onClick={() => updateQuantity(id, item.quantity - 1, variantId)} disabled={item.quantity <= 1} className="w-8 h-full flex items-center justify-center text-slate-500 hover:text-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><Minus size={14} /></button>
             <span className="text-sm font-medium text-slate-700 min-w-[32px] text-center select-none">{item.quantity}</span>
-            <button onClick={() => updateQuantity(id, item.quantity + 1, variantId)} disabled={item.quantity >= 10} className="w-8 h-full flex items-center justify-center text-slate-500 hover:text-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><Plus size={14} /></button>
+            <button onClick={() => updateQuantity(id, item.quantity + 1, variantId)} disabled={isMaxReached} className="w-8 h-full flex items-center justify-center text-slate-500 hover:text-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><Plus size={14} /></button>
           </div>
 
           <div className="flex flex-col items-end">
              {item.quantity > 1 && <p className="text-[11px] text-slate-400 mb-0.5">₹{currentPrice.toLocaleString("en-IN")} each</p>}
-             {item.inStock ? <span className="text-[11px] text-emerald-600 font-medium">✓ In Stock</span> : <span className="text-[11px] text-rose-500 font-medium">Out of Stock</span>}
+             {isMaxReached ? (
+               <span className="text-[11px] text-rose-500 font-medium">Stock limit reached</span>
+             ) : item.inStock ? (
+               <span className="text-[11px] text-emerald-600 font-medium">✓ In Stock</span>
+             ) : (
+               <span className="text-[11px] text-rose-500 font-medium">Out of Stock</span>
+             )}
           </div>
         </div>
       </div>
