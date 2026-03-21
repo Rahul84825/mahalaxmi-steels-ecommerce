@@ -5,7 +5,7 @@ import { useProducts } from "../context/ProductContext";
 import { api } from "../utils/api";
 
 const EMPTY_FORM = {
-  name: "", category: "", original_price: "", discount_percentage: 0,
+  name: "", category: "", original_price: "", discount_percentage: "",
   description: "", image: "", images: [], inStock: true,
   brand: "", stock: "", tags: "",
 };
