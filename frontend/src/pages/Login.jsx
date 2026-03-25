@@ -157,7 +157,7 @@ const Login = () => {
             <p className="text-blue-200 text-sm font-medium uppercase tracking-widest mb-10">& Home Appliance</p>
             <div className="w-full border-t border-white/10 pt-8 space-y-5 text-left">
               {[
-                { title: "2+ Years of Trust",         desc: "Serving homes since 1995"                   },
+                { title: "2+ Years of Trust",         desc: "Serving homes since 2024"                   },
                 { title: "500+ Happy Customers",    desc: "A growing family across Maharashtra"         },
                 { title: "100% Genuine Products",      desc: "Quality checked & ISI certified"             },
               ].map((item, idx) => (
