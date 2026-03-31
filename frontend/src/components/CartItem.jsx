@@ -4,6 +4,7 @@ import { useCart } from "../context/CartContext";
 const CartItem = ({ item }) => {
   const { updateQuantity, removeFromCart } = useCart();
   const id = item._id || item.id;
+  const variantId = item.variant_id || null;
   const maxQty = item.stock ? Math.min(10, item.stock) : 10;
 
   return (
@@ -32,7 +33,7 @@ const CartItem = ({ item }) => {
           {/* Quantity Controls */}
           <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg p-0.5">
             <button
-              onClick={() => updateQuantity(id, item.quantity - 1)}
+              onClick={() => updateQuantity(id, item.quantity - 1, variantId)}
               className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-slate-100 text-slate-600 transition-colors active:scale-90"
               aria-label="Decrease quantity"
             >
@@ -42,7 +43,7 @@ const CartItem = ({ item }) => {
               {item.quantity}
             </span>
             <button
-              onClick={() => updateQuantity(id, item.quantity + 1)}
+              onClick={() => updateQuantity(id, item.quantity + 1, variantId)}
               disabled={item.quantity >= maxQty}
               className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-slate-100 text-slate-600 transition-colors active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed"
               aria-label="Increase quantity"
@@ -60,7 +61,7 @@ const CartItem = ({ item }) => {
 
       {/* Remove Button */}
       <button
-        onClick={() => removeFromCart(id)}
+        onClick={() => removeFromCart(id, variantId)}
         className="self-start mt-0.5 w-7 h-7 flex items-center justify-center rounded-full text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all duration-150 active:scale-90"
         aria-label="Remove item"
       >

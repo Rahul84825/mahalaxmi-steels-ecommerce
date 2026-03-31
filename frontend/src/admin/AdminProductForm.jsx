@@ -7,7 +7,7 @@ import { api } from "../utils/api";
 const EMPTY_FORM = {
   name: "", category: "", original_price: "", discount_percentage: "",
   description: "", image: "", images: [], inStock: true,
-  brand: "", stock: "", tags: "", isHero: false,
+  brand: "", stock: "", tags: "", isHero: false, variants: [],
 };
 
 const AdminProductForm = ({ mode = "add" }) => {
@@ -24,8 +24,76 @@ const AdminProductForm = ({ mode = "add" }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError]       = useState("");
+  const [variantErrors, setVariantErrors] = useState({});
 
   const formPopulated = useRef(false);
+  const variantCounterRef = useRef(0);
+
+  const createVariantId = () => {
+    variantCounterRef.current += 1;
+    return `var_${Date.now().toString(36)}_${variantCounterRef.current.toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+  };
+
+  const createEmptyVariant = () => ({
+    id: createVariantId(),
+    label: "",
+    price: "",
+    stock: "0",
+  });
+
+  const normalizeIncomingVariants = (variants, fallbackPrice = "", fallbackStock = "0") => {
+    if (!Array.isArray(variants) || variants.length === 0) {
+      return [{
+        id: createVariantId(),
+        label: "Default",
+        price: fallbackPrice !== "" ? String(fallbackPrice) : "",
+        stock: fallbackStock !== "" ? String(fallbackStock) : "0",
+      }];
+    }
+
+    return variants.map((variant) => ({
+      id: String(variant?.id || variant?._id || createVariantId()),
+      label: variant?.label || "",
+      price: variant?.price !== undefined && variant?.price !== null ? String(variant.price) : "",
+      stock: variant?.stock !== undefined && variant?.stock !== null ? String(variant.stock) : "0",
+    }));
+  };
+
+  const validateVariants = (variants) => {
+    const fieldErrors = {};
+
+    if (!Array.isArray(variants) || variants.length === 0) {
+      return { general: "At least one variant is required", fieldErrors };
+    }
+
+    const ids = new Set();
+    for (const variant of variants) {
+      if (ids.has(variant.id)) {
+        return { general: "Variant IDs must be unique", fieldErrors };
+      }
+      ids.add(variant.id);
+
+      if (!(variant.label || "").trim()) {
+        fieldErrors[`${variant.id}.label`] = "Label is required";
+      }
+
+      const price = Number(variant.price);
+      if (!Number.isFinite(price) || price <= 0) {
+        fieldErrors[`${variant.id}.price`] = "Price must be a positive number";
+      }
+
+      const stock = Number(variant.stock);
+      if (!Number.isFinite(stock) || stock < 0) {
+        fieldErrors[`${variant.id}.stock`] = "Stock must be 0 or greater";
+      }
+    }
+
+    const hasFieldErrors = Object.keys(fieldErrors).length > 0;
+    return {
+      general: hasFieldErrors ? "Please fix variant validation errors" : "",
+      fieldErrors,
+    };
+  };
 
   useEffect(() => {
     if (mode === "edit" && id && !formPopulated.current) {
@@ -48,11 +116,26 @@ const AdminProductForm = ({ mode = "add" }) => {
           stock:       product.stock       || "",
           tags:        (product.tags || []).join(", "),
           isHero:      !!product.isHero,
+          variants:    normalizeIncomingVariants(
+            product.variants,
+            product.price || product.final_price || "",
+            product.stock || "0"
+          ),
         });
         formPopulated.current = true;  
       }
     }
   }, [mode, id, products]);
+
+  useEffect(() => {
+    if (mode === "add" && !formPopulated.current) {
+      setForm((prev) => {
+        if (Array.isArray(prev.variants) && prev.variants.length > 0) return prev;
+        return { ...prev, variants: [createEmptyVariant()] };
+      });
+      formPopulated.current = true;
+    }
+  }, [mode]);
 
   const set = (key, val) => {
     setForm((prev) => ({ ...prev, [key]: val }));
@@ -65,7 +148,51 @@ const AdminProductForm = ({ mode = "add" }) => {
     if (!form.original_price || isNaN(form.original_price) || +form.original_price <= 0) e.original_price = "Enter a valid original price";
     if (form.discount_percentage !== "" && (isNaN(form.discount_percentage) || +form.discount_percentage < 0 || +form.discount_percentage > 100)) e.discount_percentage = "Discount must be between 0 and 100";
     if (!form.category)                                 e.category = "Category is required";
+
+    const variantValidation = validateVariants(form.variants || []);
+    setVariantErrors(variantValidation.fieldErrors);
+    if (variantValidation.general) e.variants = variantValidation.general;
+
     return e;
+  };
+
+  const addVariant = () => {
+    setForm((prev) => ({
+      ...prev,
+      variants: [...(prev.variants || []), createEmptyVariant()],
+    }));
+  };
+
+  const removeVariant = (variantId) => {
+    setForm((prev) => {
+      const next = (prev.variants || []).filter((variant) => variant.id !== variantId);
+      return {
+        ...prev,
+        variants: next.length > 0 ? next : [createEmptyVariant()],
+      };
+    });
+    setVariantErrors((prev) => {
+      const next = { ...prev };
+      delete next[`${variantId}.label`];
+      delete next[`${variantId}.price`];
+      delete next[`${variantId}.stock`];
+      return next;
+    });
+  };
+
+  const updateVariant = (variantId, field, value) => {
+    setForm((prev) => ({
+      ...prev,
+      variants: (prev.variants || []).map((variant) =>
+        variant.id === variantId ? { ...variant, [field]: value } : variant
+      ),
+    }));
+    setVariantErrors((prev) => {
+      const next = { ...prev };
+      delete next[`${variantId}.${field}`];
+      return next;
+    });
+    setErrors((prev) => ({ ...prev, variants: "" }));
   };
 
   async function uploadFiles(fileList) {
@@ -144,20 +271,35 @@ const AdminProductForm = ({ mode = "add" }) => {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
 
+    const normalizedVariants = (form.variants || []).map((variant) => ({
+      id: String(variant.id),
+      label: String(variant.label || "").trim(),
+      price: Math.round(Number(variant.price || 0)),
+      stock: Math.max(0, Math.floor(Number(variant.stock || 0))),
+    }));
+
+    const variantStockTotal = normalizedVariants.reduce((sum, variant) => sum + variant.stock, 0);
+    const variantBasePrice = normalizedVariants.reduce(
+      (min, variant) => Math.min(min, variant.price),
+      normalizedVariants[0]?.price || finalPrice
+    );
+
     const payload = {
       ...form,
       original_price: +form.original_price,
       discount_percentage: +form.discount_percentage || 0,
       final_price:   finalPrice,
-      price:         finalPrice,
+      price:         variantBasePrice,
       mrp:           +form.original_price,
       originalPrice: +form.original_price,
-      stock:         +form.stock || 0,
+      stock:         variantStockTotal,
       tags:          (form.tags || "").split(",").map((t) => t.trim()).filter(Boolean),
       image:         (form.images || [])[0] || "",
       images:        form.images || [],
-      inStock:      form.inStock,
+      inStock:      !!form.inStock && variantStockTotal > 0,
       isHero:       !!form.isHero,
+      variants:     normalizedVariants,
+      has_variants: normalizedVariants.length > 0,
     };
 
     setSubmitting(true);
@@ -315,6 +457,92 @@ const AdminProductForm = ({ mode = "add" }) => {
           <div>
             <label className="block text-[13px] font-bold text-slate-700 mb-1.5">Brand</label>
             <input type="text" value={form.brand} onChange={(e) => set("brand", e.target.value)} placeholder="e.g. Prestige" className={inputClass(false)} />
+          </div>
+        </div>
+
+        {/* ── Variants ── */}
+        <div className="space-y-3 pt-2">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[13px] font-bold text-slate-700">Product Variants <span className="text-rose-500">*</span></p>
+              <p className="text-[11px] text-slate-500">Add sizes/capacities with their own price and stock.</p>
+            </div>
+            <button
+              type="button"
+              onClick={addVariant}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-xs font-bold hover:bg-blue-100 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" /> Add Variant
+            </button>
+          </div>
+
+          {errors.variants && <p className="text-[11px] font-bold text-rose-500">{errors.variants}</p>}
+
+          <div className="rounded-xl border border-slate-200 overflow-hidden">
+            <div className="grid grid-cols-[1.6fr_1fr_1fr_auto] gap-2 bg-slate-50 px-3 py-2 text-[11px] font-bold text-slate-600 uppercase tracking-wide">
+              <span>Label</span>
+              <span>Price</span>
+              <span>Stock</span>
+              <span className="text-right">Action</span>
+            </div>
+
+            <div className="divide-y divide-slate-100">
+              {(form.variants || []).map((variant) => (
+                <div key={variant.id} className="grid grid-cols-[1.6fr_1fr_1fr_auto] gap-2 px-3 py-3 items-start">
+                  <div>
+                    <input
+                      type="text"
+                      value={variant.label}
+                      onChange={(e) => updateVariant(variant.id, "label", e.target.value)}
+                      placeholder="e.g. 3 Litre"
+                      className={inputClass(!!variantErrors[`${variant.id}.label`])}
+                    />
+                    {variantErrors[`${variant.id}.label`] && (
+                      <p className="text-[10px] font-semibold text-rose-500 mt-1">{variantErrors[`${variant.id}.label`]}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <input
+                      type="number"
+                      min="1"
+                      value={variant.price}
+                      onChange={(e) => updateVariant(variant.id, "price", e.target.value)}
+                      placeholder="999"
+                      className={inputClass(!!variantErrors[`${variant.id}.price`])}
+                    />
+                    {variantErrors[`${variant.id}.price`] && (
+                      <p className="text-[10px] font-semibold text-rose-500 mt-1">{variantErrors[`${variant.id}.price`]}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <input
+                      type="number"
+                      min="0"
+                      value={variant.stock}
+                      onChange={(e) => updateVariant(variant.id, "stock", e.target.value)}
+                      placeholder="0"
+                      className={inputClass(!!variantErrors[`${variant.id}.stock`])}
+                    />
+                    {variantErrors[`${variant.id}.stock`] && (
+                      <p className="text-[10px] font-semibold text-rose-500 mt-1">{variantErrors[`${variant.id}.stock`]}</p>
+                    )}
+                  </div>
+
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={() => removeVariant(variant.id)}
+                      className="p-2 rounded-lg border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors"
+                      title="Remove variant"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 

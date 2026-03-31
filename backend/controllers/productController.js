@@ -43,6 +43,69 @@ const normalizeImageArray = (images, image) => {
   return normalized;
 };
 
+const createVariantId = (index = 0) => `variant_${Date.now().toString(36)}_${index.toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+
+const normalizeVariantsInput = (rawVariants, { required = false } = {}) => {
+  if (!Array.isArray(rawVariants)) {
+    if (required) {
+      const err = new Error("At least one variant is required");
+      err.statusCode = 400;
+      throw err;
+    }
+    return [];
+  }
+
+  const normalized = rawVariants.map((variant, index) => {
+    const id = String(variant?.id || variant?._id || createVariantId(index)).trim();
+    const label = String(variant?.label || "").trim();
+    const price = Number(variant?.price);
+    const stock = Number(variant?.stock);
+
+    if (!label) {
+      const err = new Error(`Variant #${index + 1}: label is required`);
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (!Number.isFinite(price) || price <= 0) {
+      const err = new Error(`Variant #${index + 1}: price must be a positive number`);
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (!Number.isFinite(stock) || stock < 0) {
+      const err = new Error(`Variant #${index + 1}: stock must be 0 or greater`);
+      err.statusCode = 400;
+      throw err;
+    }
+
+    return {
+      id,
+      label,
+      price: Math.round(price),
+      stock: Math.floor(stock),
+    };
+  });
+
+  if (required && normalized.length === 0) {
+    const err = new Error("At least one variant is required");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const seenIds = new Set();
+  for (const variant of normalized) {
+    if (seenIds.has(variant.id)) {
+      const err = new Error("Duplicate variant id detected");
+      err.statusCode = 400;
+      throw err;
+    }
+    seenIds.add(variant.id);
+  }
+
+  return normalized;
+};
+
 // ── GET /api/products ─────────────────────────────────────────────────────────
 const getProducts = asyncHandler(async (req, res) => {
   const { category, search, sortBy, inStockOnly, page = 1, limit = 50 } = req.query;
@@ -106,18 +169,23 @@ const createProduct = asyncHandler(async (req, res) => {
 
   const images = normalizeImageArray(req.body.images, req.body.image);
   const primaryImage = images[0] || "";
+  const variants = normalizeVariantsInput(req.body.variants, { required: true });
+  const derivedStock = variants.reduce((sum, variant) => sum + variant.stock, 0);
+  const derivedPrice = variants.reduce((min, variant) => Math.min(min, variant.price), variants[0].price);
 
   const product = await Product.create({
     name,
     description,
     category_id: resolvedCategoryId,
-    price: Math.round(+price), originalPrice: Math.round(+originalPrice),
+    price: Math.round(Number.isFinite(+price) ? +price : derivedPrice), originalPrice: Math.round(+originalPrice),
     mrp:    req.body.mrp !== undefined ? Math.round(+req.body.mrp) : Math.round(+originalPrice),
     image:  primaryImage,
     images,
-    inStock:  inStock  !== undefined ? inStock  : true,
+    inStock:  inStock  !== undefined ? !!inStock : derivedStock > 0,
     brand:    req.body.brand || "",
-    stock:    req.body.stock !== undefined ? +req.body.stock : 0,
+    stock:    req.body.stock !== undefined ? +req.body.stock : derivedStock,
+    variants,
+    has_variants: variants.length > 0,
     isHero:   !!isHero,
     tags:     req.body.tags  || [],
     specifications,
@@ -168,6 +236,18 @@ const updateProduct = asyncHandler(async (req, res) => {
     );
     product.images = normalizedImages;
     product.image = normalizedImages[0] || "";
+  }
+
+  if (req.body.variants !== undefined) {
+    const normalizedVariants = normalizeVariantsInput(req.body.variants, { required: true });
+    product.variants = normalizedVariants;
+    product.has_variants = normalizedVariants.length > 0;
+
+    // Keep product stock in sync with variant stock totals when variants are provided.
+    product.stock = normalizedVariants.reduce((sum, variant) => sum + variant.stock, 0);
+    if (product.stock <= 0) {
+      product.inStock = false;
+    }
   }
 
   const updated = await product.save();

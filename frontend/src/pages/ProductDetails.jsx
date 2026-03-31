@@ -39,6 +39,7 @@ const ProductDetails = () => {
   const [error, setError]         = useState(false);
   const [activeImg, setActiveImg] = useState(0);
   const [imgErrors, setImgErrors] = useState({});
+  const [selectedVariantId, setSelectedVariantId] = useState(null);
   const [qty, setQty]             = useState(1);
   const [added, setAdded]         = useState(false);
   const [buyNowLoading, setBuyNowLoading] = useState(false);
@@ -55,6 +56,18 @@ const ProductDetails = () => {
     if (!product) return;
     setActiveImg(0);
     setImgErrors({});
+  }, [product]);
+
+  useEffect(() => {
+    if (!product) return;
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+    if (!variants.length) {
+      setSelectedVariantId(null);
+      return;
+    }
+    const firstVariantId = String(variants[0].id || variants[0]._id || variants[0].variant_id || "");
+    setSelectedVariantId(firstVariantId || null);
+    setQty(1);
   }, [product]);
 
   // ── Real-time Synchronization ─────────────────────────────────────
@@ -104,9 +117,33 @@ const ProductDetails = () => {
     finally { if (!quiet) setLoading(false); }
   }
 
-  const productStock = Number(product?.stock ?? 0);
+  const normalizedVariants = (Array.isArray(product?.variants) ? product.variants : [])
+    .map((variant, index) => {
+      const idValue = variant.id || variant._id || variant.variant_id || `v-${index}`;
+      const priceValue = Number(variant.price);
+      const stockValue = Number(variant.stock);
+      return {
+        ...variant,
+        id: String(idValue),
+        label: variant.label || variant.name || `Variant ${index + 1}`,
+        price: Number.isFinite(priceValue) ? priceValue : Number(product?.price || 0),
+        stock: Number.isFinite(stockValue) ? Math.max(0, Math.floor(stockValue)) : Math.max(0, Math.floor(Number(product?.stock || 0))),
+      };
+    })
+    .filter((variant) => variant.label);
+
+  const selectedVariant = normalizedVariants.find((variant) => variant.id === String(selectedVariantId)) || normalizedVariants[0] || null;
+
+  const productStock = selectedVariant ? Number(selectedVariant.stock ?? 0) : Number(product?.stock ?? 0);
+  const selectedVariantKey = selectedVariant ? String(selectedVariant.id) : null;
   const cartQty = (cartItems || [])
-    .filter((item) => (item._id || item.id) === (product?._id || product?.id))
+    .filter((item) => {
+      const sameProduct = String(item._id || item.id) === String(product?._id || product?.id);
+      if (!sameProduct) return false;
+      const itemVariantId = item.variant_id ? String(item.variant_id) : null;
+      if (selectedVariantKey === null) return itemVariantId === null;
+      return itemVariantId === selectedVariantKey;
+    })
     .reduce((sum, item) => sum + (item.quantity || 1), 0);
   const remainingStock = Math.max(0, productStock - cartQty);
 
@@ -122,9 +159,10 @@ const ProductDetails = () => {
       return;
     }
 
-    for (let i = 0; i < currentQty; i++) {
-      addToCart(product);
-    }
+    addToCart(product, {
+      quantity: currentQty,
+      variantId: selectedVariantKey,
+    });
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
@@ -135,7 +173,7 @@ const ProductDetails = () => {
     }
 
     setBuyNowLoading(true);
-    setBuyNow(product, Number(qty) || 1);
+    setBuyNow(product, Number(qty) || 1, { variantId: selectedVariantKey });
     setShowCheckoutToast(true);
 
     setTimeout(() => {
@@ -168,7 +206,7 @@ const ProductDetails = () => {
   const currentSrc = hasImages && !imgErrors[safeActiveImg] ? allImages[safeActiveImg] : null;
   const isEmojiImage = product.image && !product.image.startsWith("http");
 
-  const displayPrice = Math.round(product.price ?? 0);
+  const displayPrice = Math.round(selectedVariant?.price ?? product.price ?? 0);
   const displayMrp = Math.round(product.mrp ?? product.originalPrice ?? displayPrice);
   const discount = displayMrp > displayPrice ? Math.round(((displayMrp - displayPrice) / displayMrp) * 100) : 0;
   const savings = displayMrp > displayPrice ? Math.round(displayMrp - displayPrice) : 0;
@@ -179,7 +217,7 @@ const ProductDetails = () => {
     : [];
 
   const displayStock = productStock;
-  const displayInStock = product.inStock ?? productStock > 0;
+  const displayInStock = (product.inStock ?? true) && displayStock > 0;
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -262,6 +300,38 @@ const ProductDetails = () => {
 
             {product.description && <p className="text-sm text-gray-600 leading-relaxed mb-6 border-t border-gray-100 pt-5">{product.description}</p>}
 
+            {normalizedVariants.length > 0 && (
+              <div className="mb-5">
+                <p className="text-sm font-semibold text-gray-700 mb-2">Select Variant:</p>
+                <div className="flex flex-wrap gap-2">
+                  {normalizedVariants.map((variant) => {
+                    const isSelected = String(selectedVariant?.id) === String(variant.id);
+                    const variantOutOfStock = variant.stock <= 0;
+                    return (
+                      <button
+                        key={variant.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedVariantId(String(variant.id));
+                          setQty(1);
+                        }}
+                        disabled={variantOutOfStock}
+                        className={`px-3 py-1.5 rounded-lg border text-sm font-semibold transition-colors ${
+                          isSelected
+                            ? "border-blue-500 bg-blue-50 text-blue-700"
+                            : variantOutOfStock
+                              ? "border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed"
+                              : "border-gray-200 bg-white text-gray-700 hover:border-blue-300"
+                        }`}
+                      >
+                        {variant.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {displayInStock && (
               <div className="flex items-center gap-4 mb-5">
                 <span className="text-sm font-semibold text-gray-700">Quantity:</span>
@@ -287,7 +357,7 @@ const ProductDetails = () => {
                   />
                   <button onClick={() => setQty((q) => Math.min(Math.max(1, Math.min(remainingStock, 10)), (Number(q) || 0) + 1))} disabled={qty >= Math.min(remainingStock, 10) || remainingStock <= 0} className="px-3 py-2 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><Plus className="w-4 h-4" /></button>
                 </div>
-                <span className="text-xs text-gray-400">Max {Math.min(productStock, 10)} per order</span>
+                <span className="text-xs text-gray-400">Max {Math.min(displayStock, 10)} per order</span>
               </div>
             )}
             {displayInStock && qty > 1 && <p className="text-xs text-gray-500 mb-4">Total: <span className="font-bold text-gray-800">₹{(displayPrice * qty).toLocaleString("en-IN")}</span></p>}

@@ -1,5 +1,15 @@
 const mongoose = require("mongoose");
 
+const embeddedVariantSchema = new mongoose.Schema(
+  {
+    id:    { type: String, required: true, trim: true },
+    label: { type: String, required: true, trim: true },
+    price: { type: Number, required: true, min: 0 },
+    stock: { type: Number, required: true, min: 0, default: 0 },
+  },
+  { _id: false }
+);
+
 const productSchema = new mongoose.Schema(
   {
     name:          { type: String, required: true, trim: true },
@@ -14,6 +24,7 @@ const productSchema = new mongoose.Schema(
     brand:         { type: String, default: "" },
     stock:         { type: Number, default: 0 },
     tags:          [{ type: String }],
+    variants:      { type: [embeddedVariantSchema], default: [] },
     rating:        { type: Number, default: 0, min: 0, max: 5 },
     reviews:       { type: Number, default: 0 },
     isHero:        { type: Boolean, default: false },
@@ -33,6 +44,12 @@ productSchema.pre("save", function (next) {
   if ((!this.images || this.images.length === 0) && this.image) {
     this.images = [this.image];
   }
+
+  this.has_variants = Array.isArray(this.variants) && this.variants.length > 0;
+  if (this.has_variants) {
+    this.stock = this.variants.reduce((sum, variant) => sum + Number(variant.stock || 0), 0);
+  }
+
   next();
 });
 

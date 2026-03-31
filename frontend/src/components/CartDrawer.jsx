@@ -102,7 +102,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
             </div>
           ) : (
             cartItems.map((item) => (
-              <CartItem key={item._id || item.id} item={item} />
+              <CartItem key={`${item._id || item.id}-${item.variant_id || "base"}`} item={item} />
             ))
           )}
         </div>
