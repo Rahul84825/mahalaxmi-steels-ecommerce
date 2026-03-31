@@ -56,16 +56,33 @@ const normalizeOffer = (o = {}) => {
 
 const normalizeCategory = (c = {}) => {
   const isActive = c.is_active ?? c.isActive ?? c.active ?? true;
+  const isFeatured = c.isFeatured ?? c.showInNavbar ?? false;
+  const subcategories = Array.isArray(c.subcategories) ? c.subcategories.filter(Boolean) : [];
   return {
     ...c,
     id: c._id || c.id,
     name: c.name || c.label || "",
+    slug: c.slug || "",
+    subcategories,
+    isFeatured: !!isFeatured,
+    showInNavbar: !!isFeatured,
     image: c.image || c.icon || "",
     is_active: !!isActive,
     isActive: !!isActive,
     active: !!isActive,
     label: c.name || c.label || "",
     icon: c.image || c.icon || "",
+  };
+};
+
+const normalizeBrand = (b = {}) => {
+  const isFeatured = b.isFeatured ?? b.showInNavbar ?? false;
+  return {
+    ...b,
+    id: b._id || b.id,
+    name: b.name || "",
+    isFeatured: !!isFeatured,
+    showInNavbar: !!isFeatured,
   };
 };
 
@@ -101,6 +118,7 @@ export const ProductProvider = ({ children }) => {
   const [products,   setProducts]   = useState([]);
   const [offers,     setOffers]     = useState([]);
   const [categories, setCategories] = useState([]);
+  const [brands,     setBrands]     = useState([]);
   const [orders,     setOrders]     = useState([]);
   const [recentlyViewed, setRecentlyViewed] = useState([]);
   const [wishlist, setWishlist] = useState([]);
@@ -191,9 +209,10 @@ export const ProductProvider = ({ children }) => {
       setError(null);
     }
     try {
-      const [prodRes, catRes, offerRes] = await Promise.allSettled([
+      const [prodRes, catRes, brandRes, offerRes] = await Promise.allSettled([
         api.get("/api/products?limit=100"),
         api.get("/api/categories"),
+        api.get("/api/brands"),
         api.get("/api/offers"),
       ]);
 
@@ -206,6 +225,11 @@ export const ProductProvider = ({ children }) => {
         const data = catRes.value;
         const rows = data.categories || data.data || data || [];
         setCategories((rows || []).map(normalizeCategory));
+      }
+      if (brandRes.status === "fulfilled") {
+        const data = brandRes.value;
+        const rows = data.brands || data.data || data || [];
+        setBrands((rows || []).map(normalizeBrand));
       }
       if (offerRes.status === "fulfilled") {
         const data = offerRes.value;
@@ -322,6 +346,48 @@ export const ProductProvider = ({ children }) => {
   const deleteCategory = async (id) => {
     await api.delete(`/api/categories/${id}`, token());
     setCategories((prev) => prev.filter((c) => (c._id || c.id) !== id));
+  };
+
+  const toggleCategoryFeatured = async (id) => {
+    const data = await api.patch(`/api/categories/${id}/featured`, {}, token());
+    setCategories((prev) =>
+      prev.map((c) =>
+        (c._id || c.id) === id
+          ? normalizeCategory({ ...c, isFeatured: data.isFeatured ?? data.showInNavbar })
+          : c
+      )
+    );
+  };
+
+  // ── Brand CRUD ────────────────────────────────────────────────────
+  const addBrand = async (brand) => {
+    const data = await api.post("/api/brands", brand, token());
+    const newBrand = normalizeBrand(data.brand || data);
+    setBrands((prev) => [...prev, newBrand]);
+    return newBrand;
+  };
+
+  const updateBrand = async (id, updates) => {
+    const data = await api.put(`/api/brands/${id}`, updates, token());
+    const updated = normalizeBrand(data.brand || data);
+    setBrands((prev) => prev.map((b) => (b._id || b.id) === id ? updated : b));
+    return updated;
+  };
+
+  const deleteBrand = async (id) => {
+    await api.delete(`/api/brands/${id}`, token());
+    setBrands((prev) => prev.filter((b) => (b._id || b.id) !== id));
+  };
+
+  const toggleBrandFeatured = async (id) => {
+    const data = await api.patch(`/api/brands/${id}/featured`, {}, token());
+    setBrands((prev) =>
+      prev.map((b) =>
+        (b._id || b.id) === id
+          ? normalizeBrand({ ...b, isFeatured: data.isFeatured ?? data.showInNavbar })
+          : b
+      )
+    );
   };
 
   // ── Orders ────────────────────────────────────────────────────────
@@ -481,18 +547,20 @@ export const ProductProvider = ({ children }) => {
   }, [products, wishlist]);
 
   const value = useMemo(() => ({
-    products, offers, categories, orders,
+    products, offers, categories, brands, orders,
     recentlyViewed, wishlist, recentlyViewedProducts, wishlistProducts,
     loading, error, refresh,
     addProduct, updateProduct, deleteProduct, toggleStock, setHeroProduct,
     addOffer, updateOffer, deleteOffer, toggleOffer,
-    addCategory, updateCategory, deleteCategory, toggleCategory,
+    addCategory, updateCategory, deleteCategory, toggleCategory, toggleCategoryFeatured,
+    addBrand, updateBrand, deleteBrand, toggleBrandFeatured,
     markProductViewed, clearRecentlyViewed, toggleWishlist,
     fetchOrders, placeOrder, markOrderDelivered, markOrderPaid, submitUpiTxnId, addIncomingOrder,
   }), [
     products,
     offers,
     categories,
+    brands,
     orders,
     recentlyViewed,
     wishlist,

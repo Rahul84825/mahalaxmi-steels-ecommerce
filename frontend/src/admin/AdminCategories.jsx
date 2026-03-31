@@ -3,7 +3,7 @@ import { PlusCircle, Pencil, Trash2, X, Save, AlertCircle, UploadCloud, ToggleLe
 import { useProducts } from "../context/ProductContext";
 import { api } from "../utils/api";
 
-const EMPTY_FORM = { name: "", image: "", is_active: true };
+const EMPTY_FORM = { name: "", image: "", subcategoriesInput: "", is_active: true, isFeatured: false };
 
 const CategoryModal = ({ category, onSave, onClose }) => {
   const [form, setForm] = useState(() => ({
@@ -11,7 +11,9 @@ const CategoryModal = ({ category, onSave, onClose }) => {
     ...(category || {}),
     name: category?.name || category?.label || "",
     image: category?.image || category?.icon || "",
+    subcategoriesInput: Array.isArray(category?.subcategories) ? category.subcategories.join(", ") : "",
     is_active: category?.is_active ?? category?.isActive ?? category?.active ?? true,
+    isFeatured: category?.isFeatured ?? category?.showInNavbar ?? false,
   }));
   const [errors, setErrors] = useState({});
   const [uploading, setUploading] = useState(false);
@@ -51,7 +53,9 @@ const CategoryModal = ({ category, onSave, onClose }) => {
     onSave({
       name: (form.name || "").trim(),
       image: form.image || "",
+      subcategories: String(form.subcategoriesInput || "").split(",").map((item) => item.trim()).filter(Boolean),
       is_active: !!form.is_active,
+      isFeatured: !!form.isFeatured,
     });
     onClose();
   };
@@ -107,6 +111,17 @@ const CategoryModal = ({ category, onSave, onClose }) => {
             {errors.image && <p className="text-[11px] font-bold text-rose-500 mt-1.5">{errors.image}</p>}
           </div>
 
+          <div>
+            <label className="block text-[13px] font-bold text-slate-700 mb-1.5">Subcategories</label>
+            <input
+              value={form.subcategoriesInput}
+              onChange={(e) => set("subcategoriesInput", e.target.value)}
+              placeholder="Fry Pan, Kadai, Pressure Cooker"
+              className={inputClass(false)}
+            />
+            <p className="text-[11px] font-medium text-slate-500 mt-1.5">Comma-separated values for navbar dropdown.</p>
+          </div>
+
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
             <div>
               <p className="text-sm font-bold text-slate-900">Category Active</p>
@@ -118,6 +133,22 @@ const CategoryModal = ({ category, onSave, onClose }) => {
                 className="sr-only peer"
                 checked={!!form.is_active}
                 onChange={() => set("is_active", !form.is_active)}
+              />
+              <div className="w-11 h-6 bg-slate-200 rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500" />
+            </label>
+          </div>
+
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-bold text-slate-900">Show in Navbar</p>
+              <p className="text-[11px] font-medium text-slate-500">Only featured categories appear in navbar (max 4).</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={!!form.isFeatured}
+                onChange={() => set("isFeatured", !form.isFeatured)}
               />
               <div className="w-11 h-6 bg-slate-200 rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500" />
             </label>
@@ -136,7 +167,7 @@ const CategoryModal = ({ category, onSave, onClose }) => {
 };
 
 const AdminCategories = () => {
-  const { categories, products, addCategory, updateCategory, deleteCategory, toggleCategory } = useProducts();
+  const { categories, products, addCategory, updateCategory, deleteCategory, toggleCategory, toggleCategoryFeatured } = useProducts();
   const [modal, setModal] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
@@ -180,6 +211,7 @@ const AdminCategories = () => {
           const id = cat._id || cat.id;
           const active = cat.is_active ?? cat.isActive ?? cat.active;
           const linked = linkedProductCount(id);
+          const featured = !!(cat.isFeatured ?? cat.showInNavbar);
 
           return (
             <div key={id} className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow duration-300 p-5 flex flex-col group">
@@ -211,6 +243,26 @@ const AdminCategories = () => {
                   </button>
                 </div>
               </div>
+
+              <button
+                onClick={() => toggleCategoryFeatured(id)}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border w-fit mb-3 ${
+                  featured ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-slate-100 text-slate-700 border-slate-300"
+                }`}
+              >
+                {featured ? <ToggleRight className="w-3.5 h-3.5" /> : <ToggleLeft className="w-3.5 h-3.5" />}
+                {featured ? "Show in Navbar" : "Hidden from Navbar"}
+              </button>
+
+              {!!(cat.subcategories || []).length && (
+                <div className="mb-3 flex flex-wrap gap-1.5">
+                  {(cat.subcategories || []).slice(0, 5).map((sub) => (
+                    <span key={`${id}-${sub}`} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                      {sub}
+                    </span>
+                  ))}
+                </div>
+              )}
 
               <div className="pt-3 border-t border-slate-100 mt-auto text-[11px] text-slate-500 font-medium uppercase tracking-widest">
                 <span className="font-bold text-slate-800">{linked}</span> linked products

@@ -36,6 +36,7 @@ const AdminProductForm = lazy(() => import("./admin/AdminProductForm"));
 const AdminOffers      = lazy(() => import("./admin/AdminOffers"));
 const AdminOrders      = lazy(() => import("./admin/AdminOrders"));
 const AdminCategories  = lazy(() => import("./admin/AdminCategories"));
+const AdminBrands      = lazy(() => import("./admin/AdminBrands"));
 
 // Contexts
 import { useAuth } from "./context/AuthContext";
@@ -118,6 +119,7 @@ const App = () => {
             <Route path="products/edit/:id"     element={<AdminProductForm mode="edit" />} />
             <Route path="orders"                element={<AdminOrders />} />
             <Route path="categories"            element={<AdminCategories />} />
+            <Route path="brands"                element={<AdminBrands />} />
             <Route path="offers"                element={<AdminOffers />} />
           </Route>
 

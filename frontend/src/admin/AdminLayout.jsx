@@ -2,7 +2,7 @@ import { useState } from "react";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Package, PlusCircle, Tag,
-  ShoppingBag, Store, LogOut, ChevronLeft, Menu, Percent,
+  ShoppingBag, Store, LogOut, ChevronLeft, Menu, Percent, BadgeCheck,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { to: "/admin/products",   label: "Products",    icon: Package,     end: true },
   { to: "/admin/products/add", label: "Add Product", icon: PlusCircle },
   { to: "/admin/categories", label: "Categories",  icon: Tag },
+  { to: "/admin/brands",     label: "Brands",      icon: BadgeCheck },
   { to: "/admin/offers",     label: "Offers & Deals", icon: Percent },
 ];
 

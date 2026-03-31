@@ -8,16 +8,56 @@ import {
   User,
   LogOut,
   LayoutDashboard,
+  ChevronDown,
 } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { useProducts } from "../context/ProductContext";
+
+const DesktopNavDropdown = ({ title, items = [] }) => {
+  const hasItems = Array.isArray(items) && items.length > 0;
+
+  return (
+    <div className="relative group">
+      <button
+        type="button"
+        className="px-4 py-2 rounded-full text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors duration-200 inline-flex items-center gap-1"
+      >
+        {title}
+        <ChevronDown className="w-3.5 h-3.5" />
+      </button>
+
+      <div className="absolute left-0 top-full pt-2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-150 z-50">
+        <div className="w-64 rounded-2xl border border-slate-100 bg-white shadow-xl p-2">
+          {hasItems ? (
+            items.map((item) => (
+              <NavLink
+                key={item.key}
+                to={item.to}
+                className="block px-3 py-2.5 text-sm font-semibold text-slate-700 rounded-xl hover:bg-blue-50 hover:text-blue-700 transition-colors"
+              >
+                <div className="flex flex-col">
+                  <span>{item.label}</span>
+                  {item.description ? <span className="text-[11px] text-slate-400 font-medium">{item.description}</span> : null}
+                </div>
+              </NavLink>
+            ))
+          ) : (
+            <p className="px-3 py-2 text-sm text-slate-500">No featured items yet</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // ── onCartOpen prop added — called when cart icon is clicked ─────────
 const Navbar = memo(({ onCartOpen }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [mobileCategoriesOpen, setMobileCategoriesOpen] = useState(false);
+  const [mobileBrandsOpen, setMobileBrandsOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const userMenuRef = useRef(null);
@@ -25,8 +65,28 @@ const Navbar = memo(({ onCartOpen }) => {
   const navigate = useNavigate();
 
   const { cartCount } = useCart();
-  const { wishlist } = useProducts();
+  const { wishlist, categories, brands } = useProducts();
   const { user, logout, loading } = useAuth();
+
+  const featuredCategories = (categories || [])
+    .filter((cat) => (cat.is_active ?? cat.isActive ?? true) && (cat.isFeatured ?? cat.showInNavbar))
+    .slice(0, 4);
+
+  const featuredBrands = (brands || [])
+    .filter((brand) => brand.isFeatured ?? brand.showInNavbar);
+
+  const categoryDropdownItems = featuredCategories.map((cat) => ({
+    key: String(cat._id || cat.id),
+    label: cat.name,
+    description: (cat.subcategories || []).slice(0, 2).join(" • "),
+    to: `/products?category=${encodeURIComponent(cat.slug || cat._id || cat.id)}`,
+  }));
+
+  const brandDropdownItems = featuredBrands.map((brand) => ({
+    key: String(brand._id || brand.id),
+    label: brand.name,
+    to: `/products?search=${encodeURIComponent(brand.name)}`,
+  }));
 
   const isProductsPage = location.pathname === "/products";
 
@@ -260,6 +320,8 @@ const Navbar = memo(({ onCartOpen }) => {
           <ul className="hidden md:flex items-center gap-1.5 flex-shrink-0">
             <li><NavLink to="/" className={navLinkClass} end>Home</NavLink></li>
             <li><NavLink to="/products" className={navLinkClass}>Products</NavLink></li>
+            <li><DesktopNavDropdown title="Categories" items={categoryDropdownItems} /></li>
+            <li><DesktopNavDropdown title="Brands" items={brandDropdownItems} /></li>
             <li><NavLink to="/about" className={navLinkClass}>About Us</NavLink></li>
             <li><NavLink to="/contact" className={navLinkClass}>Contact</NavLink></li>
           </ul>
@@ -401,6 +463,61 @@ const Navbar = memo(({ onCartOpen }) => {
         <div className="px-4 py-4 space-y-1">
           <NavLink to="/" end onClick={() => setMenuOpen(false)} className={mobileNavLinkClass}>Home</NavLink>
           <NavLink to="/products" onClick={() => setMenuOpen(false)} className={mobileNavLinkClass}>Products</NavLink>
+
+          <div className="rounded-xl border border-slate-100 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setMobileCategoriesOpen((prev) => !prev)}
+              className="w-full px-4 py-3 flex items-center justify-between text-left text-base font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+            >
+              <span>Categories</span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${mobileCategoriesOpen ? "rotate-180" : ""}`} />
+            </button>
+            {mobileCategoriesOpen && (
+              <div className="px-2 pb-2 space-y-1">
+                {categoryDropdownItems.length ? categoryDropdownItems.map((item) => (
+                  <NavLink
+                    key={item.key}
+                    to={item.to}
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-3 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                  >
+                    {item.label}
+                  </NavLink>
+                )) : (
+                  <p className="px-3 py-2 text-sm text-slate-500">No featured categories yet</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-slate-100 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setMobileBrandsOpen((prev) => !prev)}
+              className="w-full px-4 py-3 flex items-center justify-between text-left text-base font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+            >
+              <span>Brands</span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${mobileBrandsOpen ? "rotate-180" : ""}`} />
+            </button>
+            {mobileBrandsOpen && (
+              <div className="px-2 pb-2 space-y-1">
+                {brandDropdownItems.length ? brandDropdownItems.map((item) => (
+                  <NavLink
+                    key={item.key}
+                    to={item.to}
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-3 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                  >
+                    {item.label}
+                  </NavLink>
+                )) : (
+                  <p className="px-3 py-2 text-sm text-slate-500">No featured brands yet</p>
+                )}
+              </div>
+            )}
+          </div>
+
           <NavLink to="/about" onClick={() => setMenuOpen(false)} className={mobileNavLinkClass}>About</NavLink>
           <NavLink to="/contact" onClick={() => setMenuOpen(false)} className={mobileNavLinkClass}>Contact</NavLink>
 
