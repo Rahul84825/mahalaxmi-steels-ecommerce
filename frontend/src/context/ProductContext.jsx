@@ -247,6 +247,16 @@ export const ProductProvider = ({ children }) => {
     setProducts((prev) => prev.map((p) => (p._id || p.id) === id ? normalizeProduct({ ...p, ...updated }) : p));
   };
 
+  const setHeroProduct = async (id) => {
+    await api.patch(`/api/products/${id}/set-hero`, {}, token());
+    setProducts((prev) =>
+      prev.map((p) => ({
+        ...p,
+        isHero: String(p._id || p.id) === String(id),
+      }))
+    );
+  };
+
   // ── Offer CRUD ────────────────────────────────────────────────────
   const addOffer = async (offer) => {
     const data = await api.post("/api/offers", offer, token());
@@ -474,7 +484,7 @@ export const ProductProvider = ({ children }) => {
     products, offers, categories, orders,
     recentlyViewed, wishlist, recentlyViewedProducts, wishlistProducts,
     loading, error, refresh,
-    addProduct, updateProduct, deleteProduct, toggleStock,
+    addProduct, updateProduct, deleteProduct, toggleStock, setHeroProduct,
     addOffer, updateOffer, deleteOffer, toggleOffer,
     addCategory, updateCategory, deleteCategory, toggleCategory,
     markProductViewed, clearRecentlyViewed, toggleWishlist,

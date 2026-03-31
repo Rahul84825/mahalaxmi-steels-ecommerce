@@ -7,7 +7,7 @@ import { api } from "../utils/api";
 const EMPTY_FORM = {
   name: "", category: "", original_price: "", discount_percentage: "",
   description: "", image: "", images: [], inStock: true,
-  brand: "", stock: "", tags: "",
+  brand: "", stock: "", tags: "", isHero: false,
 };
 
 const AdminProductForm = ({ mode = "add" }) => {
@@ -47,6 +47,7 @@ const AdminProductForm = ({ mode = "add" }) => {
           brand:       product.brand       || "",
           stock:       product.stock       || "",
           tags:        (product.tags || []).join(", "),
+          isHero:      !!product.isHero,
         });
         formPopulated.current = true;  
       }
@@ -156,6 +157,7 @@ const AdminProductForm = ({ mode = "add" }) => {
       image:         (form.images || [])[0] || "",
       images:        form.images || [],
       inStock:      form.inStock,
+      isHero:       !!form.isHero,
     };
 
     setSubmitting(true);
@@ -370,6 +372,17 @@ const AdminProductForm = ({ mode = "add" }) => {
             <label className="relative inline-flex items-center cursor-pointer ml-auto">
               <input type="checkbox" className="sr-only peer" checked={form.inStock} onChange={() => set("inStock", !form.inStock)} />
               <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+            </label>
+          </div>
+
+          <div className="flex items-center justify-between gap-4 w-full p-3 rounded-xl border border-slate-200 bg-slate-50/50">
+            <div>
+              <p className="text-sm font-bold text-slate-900">📌 Feature this product in the Hero section</p>
+              <p className="text-[11px] font-medium text-slate-500">Only one hero product is active at a time</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer ml-auto">
+              <input type="checkbox" className="sr-only peer" checked={!!form.isHero} onChange={() => set("isHero", !form.isHero)} />
+              <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
         </div>

@@ -7,24 +7,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { DeliveryNotice } from "./DeliveryNotice";
 import { useCart } from "../context/CartContext";
-
-// ── Hero product data (swap with real API data when ready) ──────────
-const HERO_PRODUCT = {
-  _id: "hero-copper-ganesh-001",
-  id:  "hero-copper-ganesh-001",
-  name: "Pure Copper Ganesh Idol Set",
-  category: "Pooja Essentials",
-  price: 1299,
-  originalPrice: 1550,
-  mrp: 1550,
-  rating: 5,
-  reviewCount: 128,
-  discount: 15,
-  stock: 12,
-  inStock: true,
-  image: "", // replace with real image URL when available
-  emoji: "🪔",
-};
+import { useProducts } from "../context/ProductContext";
 
 // ── Reusable ProductCard ─────────────────────────────────────────────
 export const ProductCard = memo(({ product, onCartOpen }) => {
@@ -205,6 +188,8 @@ ProductCard.displayName = "ProductCard";
 const Hero = memo(({ onCartOpen }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
+  const { products } = useProducts();
+  const heroProduct = products.find((p) => p.isHero) || products[0] || null;
 
   const handleSearch = useCallback(
     (e) => {
@@ -309,8 +294,17 @@ const Hero = memo(({ onCartOpen }) => {
             {/* Soft backdrop blur */}
             <div className="absolute inset-0 bg-linear-to-tr from-blue-100/50 to-transparent rounded-full blur-3xl scale-90 pointer-events-none" />
 
-            {/* ProductCard replaces the old static card */}
-            <ProductCard product={HERO_PRODUCT} onCartOpen={onCartOpen} />
+            {heroProduct ? (
+              <ProductCard product={heroProduct} onCartOpen={onCartOpen} />
+            ) : (
+              <div className="relative bg-white p-8 rounded-3xl shadow-xl border border-slate-200 w-full max-w-85 sm:max-w-100 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-50 flex items-center justify-center border border-blue-100">
+                  <Star className="w-7 h-7 text-blue-500" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-1">No hero product set</h3>
+                <p className="text-sm text-slate-500">Choose a featured item from the admin products page.</p>
+              </div>
+            )}
           </div>
 
         </div>

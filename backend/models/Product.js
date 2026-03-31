@@ -16,6 +16,7 @@ const productSchema = new mongoose.Schema(
     tags:          [{ type: String }],
     rating:        { type: Number, default: 0, min: 0, max: 5 },
     reviews:       { type: Number, default: 0 },
+    isHero:        { type: Boolean, default: false },
     specifications: { type: Map, of: String },
     has_variants:  { type: Boolean, default: false },  // NEW: whether product has variants
   },

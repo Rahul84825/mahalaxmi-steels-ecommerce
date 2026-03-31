@@ -10,13 +10,15 @@ import {
   Package,
 } from "lucide-react";
 import { useProducts } from "../context/ProductContext";
+import { toast } from "react-toastify";
 
 const AdminProducts = () => {
-  const { products, categories, deleteProduct, toggleStock } = useProducts();
+  const { products, categories, deleteProduct, toggleStock, setHeroProduct, refresh } = useProducts();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState("all");
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [heroUpdatingId, setHeroUpdatingId] = useState(null);
 
   const getId = (p) => p._id || p.id;
 
@@ -40,6 +42,19 @@ const AdminProducts = () => {
   const handleDelete = async (id) => {
     await deleteProduct(id);
     setDeleteConfirm(null);
+  };
+
+  const handleSetHero = async (id) => {
+    try {
+      setHeroUpdatingId(id);
+      await setHeroProduct(id);
+      await refresh();
+      toast.success("Hero product updated!");
+    } catch (err) {
+      toast.error(err?.message || "Failed to update hero product");
+    } finally {
+      setHeroUpdatingId(null);
+    }
   };
 
   return (
@@ -158,7 +173,20 @@ const AdminProducts = () => {
                       </td>
 
                       <td className="px-6 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <div className="flex items-center justify-end gap-1.5 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          {product.isHero ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold rounded-lg bg-amber-100 text-amber-800 border border-amber-200 uppercase tracking-wide cursor-default">
+                              ★ Hero
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleSetHero(id)}
+                              disabled={heroUpdatingId === id}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed uppercase tracking-wide"
+                            >
+                              {heroUpdatingId === id ? "Updating..." : "⭐ Set as Hero"}
+                            </button>
+                          )}
                           <button
                             onClick={() => navigate(`/admin/products/edit/${id}`)}
                             className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg transition-all"

@@ -90,7 +90,7 @@ const getProductById = asyncHandler(async (req, res) => {
 
 // ── POST /api/products (admin) ────────────────────────────────────────────────
 const createProduct = asyncHandler(async (req, res) => {
-  const { name, description, category, category_id, price, originalPrice, inStock, specifications } = req.body;
+  const { name, description, category, category_id, price, originalPrice, inStock, specifications, isHero } = req.body;
   const resolvedCategoryId = category_id || category;
 
   if (!name || !resolvedCategoryId || !price || !originalPrice) {
@@ -118,9 +118,17 @@ const createProduct = asyncHandler(async (req, res) => {
     inStock:  inStock  !== undefined ? inStock  : true,
     brand:    req.body.brand || "",
     stock:    req.body.stock !== undefined ? +req.body.stock : 0,
+    isHero:   !!isHero,
     tags:     req.body.tags  || [],
     specifications,
   });
+
+  if (product.isHero) {
+    await Product.updateMany(
+      { _id: { $ne: product._id }, isHero: true },
+      { $set: { isHero: false } }
+    );
+  }
 
   res.status(201).json(product);
 });
@@ -131,7 +139,7 @@ const updateProduct = asyncHandler(async (req, res) => {
   if (!product) { res.status(404); throw new Error("Product not found"); }
 
   const fields = ["name","description","price","originalPrice","mrp",
-                  "image","images","inStock","brand","stock","tags","specifications"];
+                  "image","images","inStock","brand","stock","tags","specifications","isHero"];
   fields.forEach((f) => { 
     if (req.body[f] !== undefined) {
       // Round price fields to ensure integer values
@@ -164,6 +172,13 @@ const updateProduct = asyncHandler(async (req, res) => {
 
   const updated = await product.save();
 
+  if (updated.isHero) {
+    await Product.updateMany(
+      { _id: { $ne: updated._id }, isHero: true },
+      { $set: { isHero: false } }
+    );
+  }
+
   const populated = await Product.findById(updated._id).populate("category_id", "name is_active");
   res.json(populated);
 });
@@ -187,4 +202,17 @@ const toggleStock = asyncHandler(async (req, res) => {
   res.json({ product: { _id: product._id, inStock: product.inStock } });
 });
 
-module.exports = { getProducts, getProductById, createProduct, updateProduct, deleteProduct, toggleStock };
+// ── PATCH /api/products/:id/set-hero (admin) ─────────────────────────────────
+const setHeroProduct = asyncHandler(async (req, res) => {
+  const product = await Product.findById(req.params.id);
+  if (!product) { res.status(404); throw new Error("Product not found"); }
+
+  await Product.updateMany({}, { $set: { isHero: false } });
+  product.isHero = true;
+  await product.save();
+
+  const populated = await Product.findById(product._id).populate("category_id", "name is_active");
+  res.json({ product: populated, message: "Hero product updated" });
+});
+
+module.exports = { getProducts, getProductById, createProduct, updateProduct, deleteProduct, toggleStock, setHeroProduct };
