@@ -3,12 +3,13 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft, ShoppingCart,
   Truck, ShieldCheck, RotateCcw, Minus, Plus,
-  ChevronRight, PackageX,
+  ChevronRight, PackageX, Zap,
 } from "lucide-react";
 import ProductCard from "../components/ProductCard";
 import { api } from "../utils/api";
 import { useCart } from "../context/CartContext";
 import { useProducts } from "../context/ProductContext";
+import { useAuth } from "../context/AuthContext";
 import { getCategoryLabel, getCategorySlug } from "../utils/category";
 import { io } from "socket.io-client";
 
@@ -28,8 +29,9 @@ const ProductNotFound = () => (
 const ProductDetails = () => {
   const { id }   = useParams();
   const navigate = useNavigate();
-  const { addToCart, cartItems }   = useCart();
+  const { addToCart, cartItems, setBuyNow }   = useCart();
   const { categories, markProductViewed }  = useProducts();
+  const { user } = useAuth();
 
   const [product, setProduct]     = useState(null);
   const [related, setRelated]     = useState([]);
@@ -39,6 +41,8 @@ const ProductDetails = () => {
   const [imgErrors, setImgErrors] = useState({});
   const [qty, setQty]             = useState(1);
   const [added, setAdded]         = useState(false);
+  const [buyNowLoading, setBuyNowLoading] = useState(false);
+  const [showCheckoutToast, setShowCheckoutToast] = useState(false);
 
   useEffect(() => { fetchProduct(); window.scrollTo(0, 0); }, [id]);
 
@@ -125,6 +129,26 @@ const ProductDetails = () => {
     setTimeout(() => setAdded(false), 2000);
   };
 
+  const handleBuyNow = async () => {
+    if (!displayInStock || remainingStock <= 0 || Number(qty) < 1 || Number(qty) > remainingStock) {
+      return;
+    }
+
+    setBuyNowLoading(true);
+    setBuyNow(product, Number(qty) || 1);
+    setShowCheckoutToast(true);
+
+    setTimeout(() => {
+      setShowCheckoutToast(false);
+      if (user) {
+        navigate("/checkout");
+      } else {
+        navigate("/login?redirect=/checkout");
+      }
+      setBuyNowLoading(false);
+    }, 450);
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" /></div>;
   if (error || !product) return <ProductNotFound />;
 
@@ -159,6 +183,13 @@ const ProductDetails = () => {
 
   return (
     <div className="bg-gray-50 min-h-screen">
+      {showCheckoutToast && (
+        <div className="fixed top-4 right-4 z-50 pointer-events-none">
+          <div className="bg-gray-900 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-lg animate-[fadeIn_180ms_ease-out]">
+            Proceeding to checkout
+          </div>
+        </div>
+      )}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
         {/* Breadcrumb */}
@@ -271,12 +302,36 @@ const ProductDetails = () => {
               </p>
             )}
 
-            <button onClick={handleAddToCart} disabled={!displayInStock || remainingStock <= 0 || Number(qty) > remainingStock || Number(qty) < 1}
-              className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl text-base font-bold transition-all duration-300 mb-3
-                ${added ? "bg-green-500 text-white scale-95" : displayInStock && remainingStock > 0 && Number(qty) <= remainingStock && Number(qty) >= 1 ? "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg active:scale-95" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}>
-              <ShoppingCart className="w-5 h-5" />
-              {added ? `Added ${qty > 1 ? `(${qty})` : ""} to Cart!` : !displayInStock ? "Out of Stock" : remainingStock <= 0 ? "Max items added" : Number(qty) > remainingStock ? `Only ${remainingStock} left` : "Add to Cart"}
-            </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+              <button
+                onClick={handleAddToCart}
+                disabled={!displayInStock || remainingStock <= 0 || Number(qty) > remainingStock || Number(qty) < 1}
+                className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl text-base font-bold transition-all duration-300
+                  ${added ? "bg-green-500 text-white scale-95" : displayInStock && remainingStock > 0 && Number(qty) <= remainingStock && Number(qty) >= 1 ? "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg active:scale-95" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}
+              >
+                <ShoppingCart className="w-5 h-5" />
+                {added ? `Added ${qty > 1 ? `(${qty})` : ""} to Cart!` : !displayInStock ? "Out of Stock" : remainingStock <= 0 ? "Max items added" : Number(qty) > remainingStock ? `Only ${remainingStock} left` : "Add to Cart"}
+              </button>
+
+              <button
+                onClick={handleBuyNow}
+                disabled={buyNowLoading || !displayInStock || remainingStock <= 0 || Number(qty) > remainingStock || Number(qty) < 1}
+                className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl text-base font-bold transition-all duration-300
+                  ${displayInStock && remainingStock > 0 && Number(qty) <= remainingStock && Number(qty) >= 1 ? "bg-emerald-600 text-white hover:bg-emerald-700 hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}
+              >
+                {buyNowLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-5 h-5" />
+                    {!displayInStock ? "Out of Stock" : "Buy Now"}
+                  </>
+                )}
+              </button>
+            </div>
             <button onClick={() => navigate(-1)} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-gray-600 border border-gray-200 hover:border-blue-400 hover:text-blue-600 transition-colors">
               <ArrowLeft className="w-4 h-4" /> Back
             </button>

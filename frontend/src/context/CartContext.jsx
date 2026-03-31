@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { useAuth } from "./AuthContext";
 
 const CartContext = createContext(null);
+const BUY_NOW_STORAGE_KEY = "buyNow_item";
 
 export const CartProvider = ({ children }) => {
   const { user, loading: authLoading } = useAuth();
@@ -18,6 +19,7 @@ export const CartProvider = ({ children }) => {
   const loadedKeyRef = useRef(null);
 
   const [cartItems, setCartItems] = useState([]);
+  const [buyNowItem, setBuyNowItem] = useState(null);
 
   // ── Load cart whenever the user changes (login / logout / refresh) ─
   useEffect(() => {
@@ -49,6 +51,28 @@ export const CartProvider = ({ children }) => {
     const key = getCartKey(user);
     localStorage.setItem(key, JSON.stringify(cartItems));
   }, [cartItems, user, authLoading]);
+
+  // ── Load / persist buy-now item (kept separate from cart) ───────
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(BUY_NOW_STORAGE_KEY);
+      setBuyNowItem(stored ? JSON.parse(stored) : null);
+    } catch {
+      setBuyNowItem(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (buyNowItem) {
+        localStorage.setItem(BUY_NOW_STORAGE_KEY, JSON.stringify(buyNowItem));
+      } else {
+        localStorage.removeItem(BUY_NOW_STORAGE_KEY);
+      }
+    } catch {
+      // Ignore storage write errors
+    }
+  }, [buyNowItem]);
 
   // ── Add to cart ───────────────────────────────────────────────────
   const addToCart = (product) => {
@@ -114,6 +138,40 @@ export const CartProvider = ({ children }) => {
   // ── Clear entire cart ─────────────────────────────────────────────
   const clearCart = () => setCartItems([]);
 
+  // ── Buy now helpers (isolated from cart) ─────────────────────────
+  const setBuyNow = (product, quantity = 1) => {
+    if (!product) return;
+
+    const parsedQty = Number(quantity);
+    const safeQty = Number.isFinite(parsedQty) && parsedQty > 0 ? Math.floor(parsedQty) : 1;
+    const maxAllowed = product.stock ? Math.min(10, product.stock) : 10;
+
+    setBuyNowItem({
+      product: {
+        ...product,
+        product_id: product._id || product.id,
+        originalPrice: product.originalPrice || product.mrp || product.price,
+      },
+      quantity: Math.min(safeQty, maxAllowed),
+    });
+  };
+
+  const updateBuyNowQuantity = (newQty) => {
+    setBuyNowItem((prev) => {
+      if (!prev?.product) return prev;
+      const parsedQty = Number(newQty);
+      const qty = Number.isFinite(parsedQty) && parsedQty > 0 ? Math.floor(parsedQty) : 1;
+      const stock = Number(prev.product.stock ?? 0);
+      const maxAllowed = stock > 0 ? Math.min(10, stock) : 10;
+      return {
+        ...prev,
+        quantity: Math.min(qty, maxAllowed),
+      };
+    });
+  };
+
+  const clearBuyNowItem = () => setBuyNowItem(null);
+
   // ── Derived values ────────────────────────────────────────────────
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const cartTotal = Math.round(cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0));
@@ -125,6 +183,7 @@ export const CartProvider = ({ children }) => {
   return (
     <CartContext.Provider value={{
       cartItems,
+      buyNowItem,
       cartCount,
       cartTotal,
       isInCart,
@@ -132,6 +191,9 @@ export const CartProvider = ({ children }) => {
       updateQuantity,
       removeFromCart,
       clearCart,
+      setBuyNow,
+      updateBuyNowQuantity,
+      clearBuyNowItem,
     }}>
       {children}
     </CartContext.Provider>

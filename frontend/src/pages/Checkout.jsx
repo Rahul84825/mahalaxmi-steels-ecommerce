@@ -174,13 +174,13 @@ const PaymentForm = ({ selected, onSelect, errors, orderTotal }) => {
 };
 
 // ── Order Summary ─────────────────────────────────────────────────────────────
-const OrderSummary = ({ cartItems, cartTotal, codFee = 0 }) => {
-  const safeItems = Array.isArray(cartItems) ? cartItems : [];
+const OrderSummary = ({ items, subTotal, codFee = 0, isBuyNowFlow = false, onUpdateBuyNowQuantity }) => {
+  const safeItems = Array.isArray(items) ? items : [];
   const originalTotal = Math.round(safeItems.reduce(
     (s, i) => s + toNumber(i.originalPrice || i.mrp || i.price) * toNumber(i.quantity ?? i.qty ?? 1, 1),
     0
   ));
-  const safeCartTotal = toNumber(cartTotal);
+  const safeCartTotal = toNumber(subTotal);
   const savings = Math.round(originalTotal - safeCartTotal);
   const delivery = safeCartTotal >= 999 ? 0 : 79;
   const total = Math.round(safeCartTotal + delivery + toNumber(codFee));
@@ -212,6 +212,32 @@ const OrderSummary = ({ cartItems, cartTotal, codFee = 0 }) => {
                 <p className="text-xs font-semibold text-gray-800 line-clamp-1">{item.name}</p>
                 {item.variant?.label && <p className="text-[11px] text-blue-600 font-medium">Variant: {item.variant.label}</p>}
                 <p className="text-xs text-gray-400">Qty: {qty}</p>
+                {isBuyNowFlow && typeof onUpdateBuyNowQuantity === "function" && (
+                  <div className="mt-1.5 inline-flex items-center border border-gray-200 rounded-md overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => onUpdateBuyNowQuantity(Math.max(1, qty - 1))}
+                      className="px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50 transition-colors"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min="1"
+                      max={Math.max(1, Math.min(10, toNumber(item.stock, 10)))}
+                      value={qty}
+                      onChange={(e) => onUpdateBuyNowQuantity(e.target.value)}
+                      className="w-10 text-center text-xs py-0.5 border-x border-gray-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => onUpdateBuyNowQuantity(qty + 1)}
+                      className="px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50 transition-colors"
+                    >
+                      +
+                    </button>
+                  </div>
+                )}
               </div>
               <p className="text-xs font-bold text-gray-900 flex-shrink-0">₹{linePrice.toLocaleString("en-IN")}</p>
             </div>
@@ -362,10 +388,29 @@ const LoginWall = ({ onLogin }) => (
 const Checkout = () => {
   const navigate = useNavigate();
   const { placeOrder, submitUpiTxnId } = useProducts();
-  const { cartItems, cartTotal, clearCart } = useCart();
+  const {
+    cartItems,
+    cartTotal,
+    clearCart,
+    buyNowItem,
+    updateBuyNowQuantity,
+    clearBuyNowItem,
+  } = useCart();
   const { user, loading: authLoading } = useAuth();
 
   const safeCartItems = Array.isArray(cartItems) ? cartItems : [];
+  const hasBuyNowFlow = !!buyNowItem?.product;
+  const buyNowCheckoutItem = hasBuyNowFlow
+    ? {
+        ...buyNowItem.product,
+        quantity: Math.max(1, toNumber(buyNowItem.quantity, 1)),
+      }
+    : null;
+
+  const checkoutItems = hasBuyNowFlow ? [buyNowCheckoutItem] : safeCartItems;
+  const checkoutSubtotal = hasBuyNowFlow
+    ? Math.round(toNumber(buyNowCheckoutItem?.price) * toNumber(buyNowCheckoutItem?.quantity ?? 1, 1))
+    : toNumber(cartTotal);
 
   // ── State ─────────────────────────────────────────────────────────
   const [step,                   setStep]                   = useState(0);
@@ -398,8 +443,7 @@ const Checkout = () => {
 
   // ── Derived values (must be before any returns) ───────────────────
   const codFee       = paymentMethod === "cod" ? 50 : 0;
-  const safeCartTotal = toNumber(cartTotal);
-  const currentTotal  = safeCartTotal + (safeCartTotal >= 999 ? 0 : 79) + codFee;
+  const currentTotal  = checkoutSubtotal + (checkoutSubtotal >= 999 ? 0 : 79) + codFee;
 
   // ── Validate delivery radius ──────────────────────────────────
   const validateDeliveryRadius = async () => {
@@ -443,8 +487,8 @@ const Checkout = () => {
 
   // ── Place Order ───────────────────────────────────────────────────
   const handlePlaceOrder = async () => {
-    if (safeCartItems.length === 0) {
-      setErrors({ submit: "Your cart is empty." });
+    if (checkoutItems.length === 0) {
+      setErrors({ submit: hasBuyNowFlow ? "No Buy Now item found." : "Your cart is empty." });
       return;
     }
 
@@ -453,7 +497,7 @@ const Checkout = () => {
 
     try {
       const order = await placeOrder({
-        cartItems: safeCartItems,
+        cartItems: checkoutItems,
         address,
         paymentMethod,
       });
@@ -467,7 +511,11 @@ const Checkout = () => {
       setConfirmedCartTotal(resolvedTotal);
       setConfirmedPaymentMethod(paymentMethod);
 
-      clearCart();
+      if (hasBuyNowFlow) {
+        clearBuyNowItem();
+      } else {
+        clearCart();
+      }
       setStep(2);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
@@ -535,11 +583,11 @@ const Checkout = () => {
     return <LoginWall onLogin={() => navigate("/login?redirect=/checkout", { replace: true })} />;
   }
 
-  if (safeCartItems.length === 0 && step < 2) {
+  if (checkoutItems.length === 0 && step < 2) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-4 bg-gray-50">
         <ShoppingBag className="w-16 h-16 text-gray-300" />
-        <h2 className="text-xl font-bold text-gray-700">Your cart is empty</h2>
+        <h2 className="text-xl font-bold text-gray-700">{hasBuyNowFlow ? "No Buy Now item available" : "Your cart is empty"}</h2>
         <Link to="/products" className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
           Browse Products
         </Link>
@@ -555,13 +603,16 @@ const Checkout = () => {
         {step < 2 && (
           <div className="mb-6">
             <button
-              onClick={() => step === 0 ? navigate("/cart") : setStep(0)}
+              onClick={() => step === 0 ? navigate(hasBuyNowFlow ? "/products" : "/cart") : setStep(0)}
               className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-blue-600 transition-colors mb-3"
             >
               <ArrowLeft className="w-4 h-4" />
-              {step === 0 ? "Back to Cart" : "Back to Address"}
+              {step === 0 ? (hasBuyNowFlow ? "Back to Products" : "Back to Cart") : "Back to Address"}
             </button>
             <h1 className="text-2xl font-bold text-gray-900">Checkout</h1>
+            {hasBuyNowFlow && (
+              <p className="text-xs font-semibold text-emerald-600 mt-1">Instant Buy Now checkout</p>
+            )}
           </div>
         )}
 
@@ -655,9 +706,11 @@ const Checkout = () => {
             {/* ── Right: Order Summary ── */}
             <div className="sticky top-[88px]">
               <OrderSummary
-                cartItems={safeCartItems}
-                cartTotal={safeCartTotal}
+                items={checkoutItems}
+                subTotal={checkoutSubtotal}
                 codFee={codFee}
+                isBuyNowFlow={hasBuyNowFlow}
+                onUpdateBuyNowQuantity={hasBuyNowFlow ? updateBuyNowQuantity : undefined}
               />
             </div>
 
