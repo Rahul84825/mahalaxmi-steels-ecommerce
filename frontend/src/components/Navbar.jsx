@@ -318,12 +318,9 @@ const Navbar = memo(({ onCartOpen }) => {
 
           {/* ── Desktop Nav ── */}
           <ul className="hidden md:flex items-center gap-1.5 flex-shrink-0">
-            <li><NavLink to="/" className={navLinkClass} end>Home</NavLink></li>
             <li><NavLink to="/products" className={navLinkClass}>Products</NavLink></li>
             <li><DesktopNavDropdown title="Categories" items={categoryDropdownItems} /></li>
             <li><DesktopNavDropdown title="Brands" items={brandDropdownItems} /></li>
-            <li><NavLink to="/about" className={navLinkClass}>About Us</NavLink></li>
-            <li><NavLink to="/contact" className={navLinkClass}>Contact</NavLink></li>
           </ul>
 
           {/* ── Desktop Search (only on /products) ── */}
@@ -461,7 +458,6 @@ const Navbar = memo(({ onCartOpen }) => {
         }`}
       >
         <div className="px-4 py-4 space-y-1">
-          <NavLink to="/" end onClick={() => setMenuOpen(false)} className={mobileNavLinkClass}>Home</NavLink>
           <NavLink to="/products" onClick={() => setMenuOpen(false)} className={mobileNavLinkClass}>Products</NavLink>
 
           <div className="rounded-xl border border-slate-100 overflow-hidden">
@@ -517,9 +513,6 @@ const Navbar = memo(({ onCartOpen }) => {
               </div>
             )}
           </div>
-
-          <NavLink to="/about" onClick={() => setMenuOpen(false)} className={mobileNavLinkClass}>About</NavLink>
-          <NavLink to="/contact" onClick={() => setMenuOpen(false)} className={mobileNavLinkClass}>Contact</NavLink>
 
           <div className="pt-5 mt-2 border-t border-slate-100 flex flex-col">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 px-1">Account</p>

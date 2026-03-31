@@ -6,8 +6,21 @@ const FALLBACK_EMOJI = ["🍳", "🥘", "🔥", "🥄", "⚡"];
 
 const Categories = ({ activeCategory = "all", onCategoryChange }) => {
   const navigate = useNavigate();
-  const { categories, loading, error } = useProducts();
-  const activeCategories = (categories || []).filter((c) => c.is_active ?? c.isActive ?? c.active);
+  const { categories, products, loading, error } = useProducts();
+  const activeCategories = (categories || []).filter((c) => {
+    const isActive = c.is_active ?? c.isActive ?? c.active;
+    if (!isActive) return false;
+
+    const categoryId = String(c.id || c._id || "");
+    const categorySlug = String(c.slug || "").toLowerCase();
+
+    return (products || []).some((product) => {
+      const rawCategory = product.category || product.category_id;
+      const productCategoryId = String(rawCategory?._id || rawCategory?.id || rawCategory || "");
+      const productCategorySlug = String(rawCategory?.slug || "").toLowerCase();
+      return productCategoryId === categoryId || (categorySlug && productCategorySlug === categorySlug);
+    });
+  });
 
   const handleSelect = (catId) => {
     if (onCategoryChange) {
@@ -17,7 +30,20 @@ const Categories = ({ activeCategory = "all", onCategoryChange }) => {
     navigate(catId === "all" ? "/products" : `/products?category=${catId}`);
   };
 
-  const resolveCategoryImage = (category) => category.image || "";
+  const resolveCategoryImage = (category) => {
+    const categoryId = String(category.id || category._id || "");
+    const categorySlug = String(category.slug || "").toLowerCase();
+
+    const matchedProduct = (products || []).find((product) => {
+      const rawCategory = product.category || product.category_id;
+      const productCategoryId = String(rawCategory?._id || rawCategory?.id || rawCategory || "");
+      const productCategorySlug = String(rawCategory?.slug || "").toLowerCase();
+
+      return productCategoryId === categoryId || (categorySlug && productCategorySlug === categorySlug);
+    });
+
+    return matchedProduct?.images?.[0] || matchedProduct?.image || category.image || "";
+  };
 
   const renderSkeleton = () => (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-5 lg:gap-6">
@@ -37,7 +63,7 @@ const Categories = ({ activeCategory = "all", onCategoryChange }) => {
               Categories
             </p>
             <h2 className="section-title">Shop by Category</h2>
-            <p className="section-subtitle mt-2">Browse cookware, pressure cookers, gas stoves, utensils, and appliances in one tap.</p>
+            <p className="section-subtitle mt-2">Explore product families with rich visual cards and quick access to top collections.</p>
           </div>
 
           <button
@@ -72,8 +98,8 @@ const Categories = ({ activeCategory = "all", onCategoryChange }) => {
                   onClick={() => handleSelect(id)}
                   className={`relative group h-44 sm:h-52 rounded-2xl overflow-hidden border-2 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center
                     ${isActive 
-                      ? "border-blue-400 ring-2 ring-blue-300 shadow-lg shadow-blue-200/50" 
-                      : "border-slate-200 hover:border-slate-300"
+                      ? "border-blue-400 ring-2 ring-blue-300 shadow-xl shadow-blue-200/40" 
+                      : "border-slate-200 hover:border-slate-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-300/50"
                     }`}
                 >
                   {/* Background Image */}
@@ -86,7 +112,7 @@ const Categories = ({ activeCategory = "all", onCategoryChange }) => {
                           className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
                         />
                         {/* Gradient overlay for text contrast */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/20 to-transparent opacity-60 group-hover:opacity-50 transition-opacity duration-300" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/85 via-slate-900/35 to-transparent opacity-80 group-hover:opacity-65 transition-opacity duration-300" />
                       </>
                     ) : (
                       <>
@@ -103,8 +129,9 @@ const Categories = ({ activeCategory = "all", onCategoryChange }) => {
                     <h3 className="text-white font-extrabold text-base sm:text-lg leading-tight drop-shadow-lg">
                       {label}
                     </h3>
-                    <p className="text-white/80 text-xs sm:text-sm font-semibold mt-1 drop-shadow-md group-hover:text-white/95 transition-opacity duration-300">
-                      Shop now
+                    <p className="text-white/80 text-xs sm:text-sm font-semibold mt-1 drop-shadow-md group-hover:text-white/95 transition-opacity duration-300 inline-flex items-center gap-1">
+                      Explore
+                      <ArrowRight className="w-3.5 h-3.5" />
                     </p>
                   </div>
 
