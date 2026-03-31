@@ -198,7 +198,7 @@ const OrderSummary = ({ items, subTotal, codFee = 0, isBuyNowFlow = false, onUpd
           const imageSrc = item.images?.[0] || item.image || item.imageUrl || item.product?.images?.[0] || item.product?.image || "";
           const canRender = isRenderableImage(imageSrc);
           const qty = toNumber(item.quantity ?? item.qty ?? 1, 1);
-          const linePrice = Math.round(toNumber(item.price) * qty);
+          const linePrice = Math.round(toNumber(item.finalPrice || item.final_price || item.price) * qty);
           return (
             <div key={`${item._id || item.id}-${item.variant_id || "base"}`} className="flex items-center gap-3">
               <div className="w-8 h-8 flex-shrink-0 rounded bg-gray-100 flex items-center justify-center overflow-hidden">
@@ -409,7 +409,7 @@ const Checkout = () => {
 
   const checkoutItems = hasBuyNowFlow ? [buyNowCheckoutItem] : safeCartItems;
   const checkoutSubtotal = hasBuyNowFlow
-    ? Math.round(toNumber(buyNowCheckoutItem?.price) * toNumber(buyNowCheckoutItem?.quantity ?? 1, 1))
+    ? Math.round(toNumber(buyNowCheckoutItem?.finalPrice || buyNowCheckoutItem?.final_price || buyNowCheckoutItem?.price) * toNumber(buyNowCheckoutItem?.quantity ?? 1, 1))
     : toNumber(cartTotal);
 
   // ── State ─────────────────────────────────────────────────────────

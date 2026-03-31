@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import { useCart } from "../context/CartContext";
 import { useProducts } from "../context/ProductContext";
 import { getCategoryLabel } from "../utils/category";
+import { calculateFinalPrice } from "../utils/priceCalculator";
 
 const ProductCard = ({ product, onQuickView, compact = false }) => {
   const [imgError, setImgError] = useState(false);
@@ -22,9 +23,12 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
   const inCart   = cartQty > 0;
 
   // ── Pricing ────────────────────────────────────────────────────────
-  const mrp      = product.mrp || product.originalPrice || 0;
-  const price    = product.price || 0;
-  const discount = mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0;
+  // NEW: Use variant-based pricing from first/default variant
+  const defaultVariant = (product.variants && product.variants[0]) || {};
+  const originalPrice = Number(defaultVariant.originalPrice ?? defaultVariant.price ?? product.originalPrice ?? product.mrp ?? 0);
+  const discountPercent = Number(defaultVariant.discountPercent ?? 0);
+  const finalPrice = originalPrice > 0 ? calculateFinalPrice(originalPrice, discountPercent) : 0;
+  const savingsAmount = originalPrice > 0 ? Math.round(originalPrice * discountPercent / 100) : 0;
 
   // ── Image ──────────────────────────────────────────────────────────
   const primaryImage =
@@ -98,10 +102,10 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
         )}
 
         {/* Discount badge — top left */}
-        {discount > 0 && (
+        {discountPercent > 0 && (
           <div className="absolute left-3 top-3 z-10">
             <span className="rounded-full bg-rose-500 px-2.5 py-1 text-[10px] font-bold tracking-wide text-white shadow-sm">
-              {discount}% OFF
+              {Math.round(discountPercent)}% OFF
             </span>
           </div>
         )}
@@ -186,17 +190,17 @@ const ProductCard = ({ product, onQuickView, compact = false }) => {
         {/* Pricing */}
         <div className="mt-auto mb-3.5 flex items-end gap-2">
           <span className="text-xl font-black tracking-tight text-slate-900">
-            ₹{price.toLocaleString("en-IN")}
+            ₹{finalPrice.toLocaleString("en-IN")}
           </span>
-          {mrp > price && (
+          {originalPrice > finalPrice && (
             <span className="mb-0.5 text-sm font-medium text-slate-400 line-through">
-              ₹{mrp.toLocaleString("en-IN")}
+              ₹{originalPrice.toLocaleString("en-IN")}
             </span>
           )}
-          {discount > 0 && (
+          {discountPercent > 0 && (
             <span className="ml-auto rounded-lg bg-emerald-50 border border-emerald-100 px-2 py-0.5
                              text-[10px] font-bold text-emerald-700">
-              Save ₹{Math.round(mrp - price).toLocaleString("en-IN")}
+              Save ₹{savingsAmount.toLocaleString("en-IN")}
             </span>
           )}
         </div>

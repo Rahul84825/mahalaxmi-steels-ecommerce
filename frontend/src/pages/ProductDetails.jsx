@@ -11,6 +11,7 @@ import { useCart } from "../context/CartContext";
 import { useProducts } from "../context/ProductContext";
 import { useAuth } from "../context/AuthContext";
 import { getCategoryLabel, getCategorySlug } from "../utils/category";
+import { calculateFinalPrice } from "../utils/priceCalculator";
 import { io } from "socket.io-client";
 
 const SOCKET_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/api\/?$/, "");
@@ -117,24 +118,29 @@ const ProductDetails = () => {
     finally { if (!quiet) setLoading(false); }
   }
 
+  // Normalize variants with new pricing structure
   const normalizedVariants = (Array.isArray(product?.variants) ? product.variants : [])
     .map((variant, index) => {
       const idValue = variant.id || variant._id || variant.variant_id || `v-${index}`;
-      const priceValue = Number(variant.price);
-      const stockValue = Number(variant.stock);
+      const originalPrice = Number(variant.originalPrice ?? variant.price ?? 0);
+      const discountPercent = Number(variant.discountPercent ?? 0);
+      const finalPrice = calculateFinalPrice(originalPrice, discountPercent);
+      const stockValue = Number(variant.stock ?? 0);
       return {
         ...variant,
         id: String(idValue),
         label: variant.label || variant.name || `Variant ${index + 1}`,
-        price: Number.isFinite(priceValue) ? priceValue : Number(product?.price || 0),
-        stock: Number.isFinite(stockValue) ? Math.max(0, Math.floor(stockValue)) : Math.max(0, Math.floor(Number(product?.stock || 0))),
+        originalPrice,
+        discountPercent,
+        finalPrice,
+        stock: Math.max(0, Math.floor(stockValue)),
       };
     })
-    .filter((variant) => variant.label);
+    .filter((variant) => variant.label && variant.finalPrice > 0);
 
   const selectedVariant = normalizedVariants.find((variant) => variant.id === String(selectedVariantId)) || normalizedVariants[0] || null;
 
-  const productStock = selectedVariant ? Number(selectedVariant.stock ?? 0) : Number(product?.stock ?? 0);
+  const productStock = selectedVariant ? Number(selectedVariant.stock ?? 0) : 0;
   const selectedVariantKey = selectedVariant ? String(selectedVariant.id) : null;
   const cartQty = (cartItems || [])
     .filter((item) => {
@@ -146,8 +152,6 @@ const ProductDetails = () => {
     })
     .reduce((sum, item) => sum + (item.quantity || 1), 0);
   const remainingStock = Math.max(0, productStock - cartQty);
-
-  const handleAddToCart = () => {
     if (remainingStock <= 0) {
       alert("Max items already added to cart");
       return;
@@ -206,10 +210,11 @@ const ProductDetails = () => {
   const currentSrc = hasImages && !imgErrors[safeActiveImg] ? allImages[safeActiveImg] : null;
   const isEmojiImage = product.image && !product.image.startsWith("http");
 
-  const displayPrice = Math.round(selectedVariant?.price ?? product.price ?? 0);
-  const displayMrp = Math.round(product.mrp ?? product.originalPrice ?? displayPrice);
-  const discount = displayMrp > displayPrice ? Math.round(((displayMrp - displayPrice) / displayMrp) * 100) : 0;
-  const savings = displayMrp > displayPrice ? Math.round(displayMrp - displayPrice) : 0;
+  // Use variant-based pricing
+  const displayFinalPrice = Math.round(selectedVariant?.finalPrice ?? 0);
+  const displayOriginalPrice = Math.round(selectedVariant?.originalPrice ?? displayFinalPrice);
+  const displayDiscount = selectedVariant?.discountPercent ?? 0;
+  const savings = displayOriginalPrice > displayFinalPrice ? Math.round(displayOriginalPrice - displayFinalPrice) : 0;
   const categoryLabel = getCategoryLabel(product.category, categories);
   const categorySlug  = getCategorySlug(product.category, categories);
   const specs = product.specifications
@@ -217,7 +222,7 @@ const ProductDetails = () => {
     : [];
 
   const displayStock = productStock;
-  const displayInStock = (product.inStock ?? true) && displayStock > 0;
+  const displayInStock = displayStock > 0;
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -248,7 +253,7 @@ const ProductDetails = () => {
           <div className="flex flex-col gap-3">
             <div className="relative bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden aspect-square flex items-center justify-center group">
               <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
-                {discount > 0 && <span className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">-{discount}%</span>}
+                {displayDiscount > 0 && <span className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">-{Math.round(displayDiscount)}%</span>}
               {!displayInStock && <span className="bg-gray-400 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">Sold Out</span>}
               </div>
               {currentSrc ? (
@@ -284,12 +289,12 @@ const ProductDetails = () => {
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 leading-tight">{product.name}</h1>
 
             <div className="flex items-baseline gap-3 mb-2">
-              <span className="text-3xl font-bold text-gray-900">₹{displayPrice.toLocaleString("en-IN")}</span>
-              {displayMrp > displayPrice && (
-                <span className="text-lg text-gray-400 line-through">₹{displayMrp.toLocaleString("en-IN")}</span>
+              <span className="text-3xl font-bold text-gray-900">₹{displayFinalPrice.toLocaleString("en-IN")}</span>
+              {displayOriginalPrice > displayFinalPrice && (
+                <span className="text-lg text-gray-400 line-through">₹{displayOriginalPrice.toLocaleString("en-IN")}</span>
               )}
             </div>
-            {savings > 0 && <p className="text-sm font-semibold text-green-600 mb-4">You save ₹{savings.toLocaleString("en-IN")} ({discount}% off)</p>}
+            {savings > 0 && <p className="text-sm font-semibold text-green-600 mb-4">You save ₹{savings.toLocaleString("en-IN")} ({Math.round(displayDiscount)}% off)</p>}
 
             <div className="flex items-center gap-2 mb-6">
               <span className={`w-2.5 h-2.5 rounded-full ${displayInStock ? "bg-green-500" : "bg-red-400"}`} />

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { useAuth } from "./AuthContext";
+import { calculateFinalPrice } from "../utils/priceCalculator";
 
 const CartContext = createContext(null);
 const BUY_NOW_STORAGE_KEY = "buyNow_item";
@@ -21,16 +22,19 @@ const getCompositeKey = (productId, variantId = null) => `${String(productId)}::
 const normalizeVariant = (variant = {}, index = 0) => {
   const id = String(variant.id || variant._id || variant.variant_id || `v-${index}`);
   const label = String(variant.label || variant.name || `Variant ${index + 1}`);
-  const price = toNumber(variant.price, 0);
+  const originalPrice = toNumber(variant.originalPrice ?? variant.price, 0);
+  const discountPercent = toNumber(variant.discountPercent ?? 0, 0);
+  const finalPrice = calculateFinalPrice(originalPrice, discountPercent);
   const stock = Math.max(0, Math.floor(toNumber(variant.stock, 0)));
-  return { ...variant, id, label, price, stock };
+  
+  return { ...variant, id, label, originalPrice, discountPercent, finalPrice, stock };
 };
 
 const getProductVariants = (product = {}) => {
   if (!Array.isArray(product.variants)) return [];
   return product.variants
     .map((variant, index) => normalizeVariant(variant, index))
-    .filter((variant) => variant.label && Number.isFinite(variant.price));
+    .filter((variant) => variant.label && Number.isFinite(variant.finalPrice));
 };
 
 const getMaxAllowed = (stockValue) => {
@@ -60,7 +64,8 @@ const normalizePersistedCartItems = (items) => {
       if (!productId) return null;
       const variantId = item.variant_id ? String(item.variant_id) : getVariantId(item.variant);
       const quantity = Math.max(1, Math.floor(toNumber(item.quantity, 1)));
-      const price = toNumber(item.price, 0);
+      // Use finalPrice if available, fallback to price for backward compat
+      const finalPrice = toNumber(item.finalPrice ?? item.price, 0);
       const stock = Math.max(0, Math.floor(toNumber(item.stock, 0)));
 
       return {
@@ -68,7 +73,7 @@ const normalizePersistedCartItems = (items) => {
         product_id: productId,
         variant_id: variantId,
         quantity,
-        price,
+        finalPrice,
         stock,
       };
     })
@@ -176,9 +181,13 @@ export const CartProvider = ({ children }) => {
       const selectedVariantId = getVariantId(selectedVariant);
 
       const quantityRequested = Math.max(1, Math.floor(toNumber(options.quantity, 1)));
-      const resolvedPrice = selectedVariant ? toNumber(selectedVariant.price, toNumber(product.price, 0)) : toNumber(product.price, 0);
+      // Use finalPrice from normalized variant
+      const resolvedFinalPrice = selectedVariant ? selectedVariant.finalPrice : 0;
+      const resolvedOriginalPrice = selectedVariant ? selectedVariant.originalPrice : 0;
+      const resolvedDiscountPercent = selectedVariant ? selectedVariant.discountPercent : 0;
       const resolvedStock = selectedVariant ? toNumber(selectedVariant.stock, toNumber(product.stock, 0)) : toNumber(product.stock, 0);
       const maxAllowed = getMaxAllowed(resolvedStock);
+      
       if (maxAllowed <= 0) return prev;
 
       const itemKey = getCompositeKey(productId, selectedVariantId);
@@ -189,7 +198,9 @@ export const CartProvider = ({ children }) => {
         const currentQty = Math.max(1, Math.floor(toNumber(updated[existingIndex].quantity, 1)));
         updated[existingIndex].quantity = Math.min(currentQty + quantityRequested, maxAllowed);
         updated[existingIndex].stock = resolvedStock;
-        updated[existingIndex].price = resolvedPrice;
+        updated[existingIndex].finalPrice = resolvedFinalPrice;
+        updated[existingIndex].originalPrice = resolvedOriginalPrice;
+        updated[existingIndex].discountPercent = resolvedDiscountPercent;
         updated[existingIndex].variant = selectedVariant || null;
         updated[existingIndex].variant_id = selectedVariantId;
         updated[existingIndex].inStock = resolvedStock > 0;
@@ -204,9 +215,10 @@ export const CartProvider = ({ children }) => {
           variant: selectedVariant || null,
           variant_id: selectedVariantId,
           quantity: Math.min(quantityRequested, maxAllowed),
-          price: resolvedPrice,
+          finalPrice: resolvedFinalPrice,
+          originalPrice: resolvedOriginalPrice,
+          discountPercent: resolvedDiscountPercent,
           stock: resolvedStock,
-          originalPrice: product.originalPrice || product.mrp || product.price,
           inStock: resolvedStock > 0,
         },
       ];
@@ -283,7 +295,9 @@ export const CartProvider = ({ children }) => {
 
     const selectedVariant = resolveVariantForProduct(product, options);
     const selectedVariantId = getVariantId(selectedVariant);
-    const resolvedPrice = selectedVariant ? toNumber(selectedVariant.price, toNumber(product.price, 0)) : toNumber(product.price, 0);
+    const resolvedFinalPrice = selectedVariant ? selectedVariant.finalPrice : 0;
+    const resolvedOriginalPrice = selectedVariant ? selectedVariant.originalPrice : 0;
+    const resolvedDiscountPercent = selectedVariant ? selectedVariant.discountPercent : 0;
     const resolvedStock = selectedVariant ? toNumber(selectedVariant.stock, toNumber(product.stock, 0)) : toNumber(product.stock, 0);
     const maxAllowed = getMaxAllowed(resolvedStock);
 
@@ -295,9 +309,10 @@ export const CartProvider = ({ children }) => {
         product_id: getProductId(product),
         variant: selectedVariant || null,
         variant_id: selectedVariantId,
-        price: resolvedPrice,
+        finalPrice: resolvedFinalPrice,
+        originalPrice: resolvedOriginalPrice,
+        discountPercent: resolvedDiscountPercent,
         stock: resolvedStock,
-        originalPrice: product.originalPrice || product.mrp || product.price,
       },
       variant: selectedVariant || null,
       variant_id: selectedVariantId,
@@ -323,7 +338,8 @@ export const CartProvider = ({ children }) => {
 
   // ── Derived values ────────────────────────────────────────────────
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const cartTotal = Math.round(cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0));
+  // Use finalPrice for total calculation
+  const cartTotal = Math.round(cartItems.reduce((sum, item) => sum + (item.finalPrice || item.price || 0) * item.quantity, 0));
   const isInCart  = (id, variantId = null) => {
     const targetProductId = getItemKey(id);
     const targetVariantId = variantId ? String(variantId) : null;

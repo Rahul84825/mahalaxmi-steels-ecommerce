@@ -3,11 +3,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Save, UploadCloud, Image as ImageIcon, Tag, AlertCircle, CheckCircle2, X, Plus, Trash2 } from "lucide-react";
 import { useProducts } from "../context/ProductContext";
 import { api } from "../utils/api";
+import { calculateFinalPrice } from "../utils/priceCalculator";
 
 const EMPTY_FORM = {
-  name: "", category: "", original_price: "", discount_percentage: "",
+  name: "", category: "",
   description: "", image: "", images: [], inStock: true,
-  brand: "", stock: "", tags: "", isHero: false, variants: [],
+  brand: "", tags: "", isHero: false, variants: [],
 };
 
 const AdminProductForm = ({ mode = "add" }) => {
@@ -37,16 +38,18 @@ const AdminProductForm = ({ mode = "add" }) => {
   const createEmptyVariant = () => ({
     id: createVariantId(),
     label: "",
-    price: "",
+    originalPrice: "",
+    discountPercent: "0",
     stock: "0",
   });
 
-  const normalizeIncomingVariants = (variants, fallbackPrice = "", fallbackStock = "0") => {
+  const normalizeIncomingVariantsLocal = (variants, fallbackStock = "0") => {
     if (!Array.isArray(variants) || variants.length === 0) {
       return [{
         id: createVariantId(),
         label: "Default",
-        price: fallbackPrice !== "" ? String(fallbackPrice) : "",
+        originalPrice: "",
+        discountPercent: "0",
         stock: fallbackStock !== "" ? String(fallbackStock) : "0",
       }];
     }
@@ -54,12 +57,13 @@ const AdminProductForm = ({ mode = "add" }) => {
     return variants.map((variant) => ({
       id: String(variant?.id || variant?._id || createVariantId()),
       label: variant?.label || "",
-      price: variant?.price !== undefined && variant?.price !== null ? String(variant.price) : "",
+      originalPrice: variant?.originalPrice ?? variant?.price ?? "",
+      discountPercent: String(variant?.discountPercent ?? "0"),
       stock: variant?.stock !== undefined && variant?.stock !== null ? String(variant.stock) : "0",
     }));
   };
 
-  const validateVariants = (variants) => {
+  const validateVariantsLocal = (variants) => {
     const fieldErrors = {};
 
     if (!Array.isArray(variants) || variants.length === 0) {
@@ -77,14 +81,19 @@ const AdminProductForm = ({ mode = "add" }) => {
         fieldErrors[`${variant.id}.label`] = "Label is required";
       }
 
-      const price = Number(variant.price);
-      if (!Number.isFinite(price) || price <= 0) {
-        fieldErrors[`${variant.id}.price`] = "Price must be a positive number";
+      const originalPrice = Number(variant.originalPrice);
+      if (!Number.isFinite(originalPrice) || originalPrice <= 0) {
+        fieldErrors[`${variant.id}.originalPrice`] = "Price must be > 0";
+      }
+
+      const discountPercent = Number(variant.discountPercent);
+      if (!Number.isFinite(discountPercent) || discountPercent < 0 || discountPercent > 90) {
+        fieldErrors[`${variant.id}.discountPercent`] = "Discount must be 0-90%";
       }
 
       const stock = Number(variant.stock);
       if (!Number.isFinite(stock) || stock < 0) {
-        fieldErrors[`${variant.id}.stock`] = "Stock must be 0 or greater";
+        fieldErrors[`${variant.id}.stock`] = "Stock must be >= 0";
       }
     }
 
@@ -102,25 +111,14 @@ const AdminProductForm = ({ mode = "add" }) => {
         setForm({
           name:        product.name        || "",
           category:    product.category?._id || product.category || "",
-          original_price: product.original_price || product.mrp || product.originalPrice || "",
-          discount_percentage: product.discount_percentage ?? (
-            (product.mrp || product.originalPrice) && product.price && (product.mrp || product.originalPrice) > product.price
-              ? Math.round((((product.mrp || product.originalPrice) - product.price) / (product.mrp || product.originalPrice)) * 100)
-              : 0
-          ),
           description: product.description || "",
           image:       product.images?.[0] || product.image || "",
           images:      product.images?.length ? product.images : (product.image ? [product.image] : []),
           inStock:     product.inStock     ?? true,
           brand:       product.brand       || "",
-          stock:       product.stock       || "",
           tags:        (product.tags || []).join(", "),
           isHero:      !!product.isHero,
-          variants:    normalizeIncomingVariants(
-            product.variants,
-            product.price || product.final_price || "",
-            product.stock || "0"
-          ),
+          variants:    normalizeIncomingVariantsLocal(product.variants, product.stock || "0"),
         });
         formPopulated.current = true;  
       }
@@ -144,12 +142,10 @@ const AdminProductForm = ({ mode = "add" }) => {
 
   const validate = () => {
     const e = {};
-    if (!(form.name || "").trim())                              e.name     = "Product name is required";
-    if (!form.original_price || isNaN(form.original_price) || +form.original_price <= 0) e.original_price = "Enter a valid original price";
-    if (form.discount_percentage !== "" && (isNaN(form.discount_percentage) || +form.discount_percentage < 0 || +form.discount_percentage > 100)) e.discount_percentage = "Discount must be between 0 and 100";
-    if (!form.category)                                 e.category = "Category is required";
+    if (!(form.name || "").trim())         e.name = "Product name is required";
+    if (!form.category)                   e.category = "Category is required";
 
-    const variantValidation = validateVariants(form.variants || []);
+    const variantValidation = validateVariantsLocal(form.variants || []);
     setVariantErrors(variantValidation.fieldErrors);
     if (variantValidation.general) e.variants = variantValidation.general;
 
@@ -174,7 +170,8 @@ const AdminProductForm = ({ mode = "add" }) => {
     setVariantErrors((prev) => {
       const next = { ...prev };
       delete next[`${variantId}.label`];
-      delete next[`${variantId}.price`];
+      delete next[`${variantId}.originalPrice`];
+      delete next[`${variantId}.discountPercent`];
       delete next[`${variantId}.stock`];
       return next;
     });
@@ -274,32 +271,24 @@ const AdminProductForm = ({ mode = "add" }) => {
     const normalizedVariants = (form.variants || []).map((variant) => ({
       id: String(variant.id),
       label: String(variant.label || "").trim(),
-      price: Math.round(Number(variant.price || 0)),
+      originalPrice: Math.round(Number(variant.originalPrice || 0)),
+      discountPercent: Math.round(Number(variant.discountPercent || 0) * 100) / 100,
       stock: Math.max(0, Math.floor(Number(variant.stock || 0))),
     }));
 
     const variantStockTotal = normalizedVariants.reduce((sum, variant) => sum + variant.stock, 0);
-    const variantBasePrice = normalizedVariants.reduce(
-      (min, variant) => Math.min(min, variant.price),
-      normalizedVariants[0]?.price || finalPrice
-    );
 
     const payload = {
-      ...form,
-      original_price: +form.original_price,
-      discount_percentage: +form.discount_percentage || 0,
-      final_price:   finalPrice,
-      price:         variantBasePrice,
-      mrp:           +form.original_price,
-      originalPrice: +form.original_price,
-      stock:         variantStockTotal,
-      tags:          (form.tags || "").split(",").map((t) => t.trim()).filter(Boolean),
-      image:         (form.images || [])[0] || "",
-      images:        form.images || [],
-      inStock:      !!form.inStock && variantStockTotal > 0,
-      isHero:       !!form.isHero,
-      variants:     normalizedVariants,
-      has_variants: normalizedVariants.length > 0,
+      name: form.name,
+      category: form.category,
+      description: form.description,
+      image: (form.images || [])[0] || "",
+      images: form.images || [],
+      brand: form.brand,
+      tags: (form.tags || "").split(",").map((t) => t.trim()).filter(Boolean),
+      inStock: !!form.inStock && variantStockTotal > 0,
+      isHero: !!form.isHero,
+      variants: normalizedVariants,
     };
 
     setSubmitting(true);
@@ -318,12 +307,7 @@ const AdminProductForm = ({ mode = "add" }) => {
     }
   };
 
-  const calcFinalPrice = () => {
-    const orig = +form.original_price || 0;
-    const disc = +form.discount_percentage || 0;
-    return Math.round(orig - (orig * disc / 100));
-  };
-  const finalPrice = calcFinalPrice();
+
 
   const inputClass = (hasError) =>
     `w-full px-4 py-3 text-sm font-medium border rounded-xl focus:outline-none focus:bg-white focus:ring-4 transition-all shadow-inner
@@ -479,99 +463,99 @@ const AdminProductForm = ({ mode = "add" }) => {
           {errors.variants && <p className="text-[11px] font-bold text-rose-500">{errors.variants}</p>}
 
           <div className="rounded-xl border border-slate-200 overflow-hidden">
-            <div className="grid grid-cols-[1.6fr_1fr_1fr_auto] gap-2 bg-slate-50 px-3 py-2 text-[11px] font-bold text-slate-600 uppercase tracking-wide">
+            <div className="grid grid-cols-[1.2fr_1.2fr_1.2fr_1fr_auto] gap-2 bg-slate-50 px-3 py-2 text-[11px] font-bold text-slate-600 uppercase tracking-wide">
               <span>Label</span>
-              <span>Price</span>
+              <span>Original Price</span>
+              <span>Discount %</span>
               <span>Stock</span>
               <span className="text-right">Action</span>
             </div>
 
             <div className="divide-y divide-slate-100">
-              {(form.variants || []).map((variant) => (
-                <div key={variant.id} className="grid grid-cols-[1.6fr_1fr_1fr_auto] gap-2 px-3 py-3 items-start">
-                  <div>
-                    <input
-                      type="text"
-                      value={variant.label}
-                      onChange={(e) => updateVariant(variant.id, "label", e.target.value)}
-                      placeholder="e.g. 3 Litre"
-                      className={inputClass(!!variantErrors[`${variant.id}.label`])}
-                    />
-                    {variantErrors[`${variant.id}.label`] && (
-                      <p className="text-[10px] font-semibold text-rose-500 mt-1">{variantErrors[`${variant.id}.label`]}</p>
-                    )}
-                  </div>
+              {(form.variants || []).map((variant) => {
+                const finalPrice = calculateFinalPrice(Number(variant.originalPrice) || 0, Number(variant.discountPercent) || 0);
+                return (
+                  <div key={variant.id} className="grid grid-cols-[1.2fr_1.2fr_1.2fr_1fr_auto] gap-2 px-3 py-3 items-start">
+                    <div>
+                      <input
+                        type="text"
+                        value={variant.label}
+                        onChange={(e) => updateVariant(variant.id, "label", e.target.value)}
+                        placeholder="e.g. 3 Litre"
+                        className={inputClass(!!variantErrors[`${variant.id}.label`])}
+                      />
+                      {variantErrors[`${variant.id}.label`] && (
+                        <p className="text-[10px] font-semibold text-rose-500 mt-1">{variantErrors[`${variant.id}.label`]}</p>
+                      )}
+                    </div>
 
-                  <div>
-                    <input
-                      type="number"
-                      min="1"
-                      value={variant.price}
-                      onChange={(e) => updateVariant(variant.id, "price", e.target.value)}
-                      placeholder="999"
-                      className={inputClass(!!variantErrors[`${variant.id}.price`])}
-                    />
-                    {variantErrors[`${variant.id}.price`] && (
-                      <p className="text-[10px] font-semibold text-rose-500 mt-1">{variantErrors[`${variant.id}.price`]}</p>
-                    )}
-                  </div>
+                    <div>
+                      <input
+                        type="number"
+                        min="1"
+                        value={variant.originalPrice}
+                        onChange={(e) => updateVariant(variant.id, "originalPrice", e.target.value)}
+                        placeholder="999"
+                        className={inputClass(!!variantErrors[`${variant.id}.originalPrice`])}
+                      />
+                      {variantErrors[`${variant.id}.originalPrice`] && (
+                        <p className="text-[10px] font-semibold text-rose-500 mt-1">{variantErrors[`${variant.id}.originalPrice`]}</p>
+                      )}
+                    </div>
 
-                  <div>
-                    <input
-                      type="number"
-                      min="0"
-                      value={variant.stock}
-                      onChange={(e) => updateVariant(variant.id, "stock", e.target.value)}
-                      placeholder="0"
-                      className={inputClass(!!variantErrors[`${variant.id}.stock`])}
-                    />
-                    {variantErrors[`${variant.id}.stock`] && (
-                      <p className="text-[10px] font-semibold text-rose-500 mt-1">{variantErrors[`${variant.id}.stock`]}</p>
-                    )}
-                  </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          min="0"
+                          max="90"
+                          step="0.5"
+                          value={variant.discountPercent}
+                          onChange={(e) => updateVariant(variant.id, "discountPercent", e.target.value)}
+                          placeholder="0"
+                          className={inputClass(!!variantErrors[`${variant.id}.discountPercent`])}
+                        />
+                        {finalPrice > 0 && (
+                          <div className="text-[10px] font-bold text-slate-500 whitespace-nowrap">
+                            = ₹{finalPrice}
+                          </div>
+                        )}
+                      </div>
+                      {variantErrors[`${variant.id}.discountPercent`] && (
+                        <p className="text-[10px] font-semibold text-rose-500 mt-1">{variantErrors[`${variant.id}.discountPercent`]}</p>
+                      )}
+                    </div>
 
-                  <div className="flex justify-end pt-1">
-                    <button
-                      type="button"
-                      onClick={() => removeVariant(variant.id)}
-                      className="p-2 rounded-lg border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors"
-                      title="Remove variant"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div>
+                      <input
+                        type="number"
+                        min="0"
+                        value={variant.stock}
+                        onChange={(e) => updateVariant(variant.id, "stock", e.target.value)}
+                        placeholder="0"
+                        className={inputClass(!!variantErrors[`${variant.id}.stock`])}
+                      />
+                      {variantErrors[`${variant.id}.stock`] && (
+                        <p className="text-[10px] font-semibold text-rose-500 mt-1">{variantErrors[`${variant.id}.stock`]}</p>
+                      )}
+                    </div>
+
+                    <div className="flex justify-end pt-1">
+                      <button
+                        type="button"
+                        onClick={() => removeVariant(variant.id)}
+                        className="p-2 rounded-lg border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors"
+                        title="Remove variant"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
-
-        {/* ── Pricing ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          <div>
-            <label className="block text-[13px] font-bold text-slate-700 mb-1.5">Original Price (MRP) ₹ <span className="text-rose-500">*</span></label>
-            <input type="number" value={form.original_price} onChange={(e) => set("original_price", e.target.value)} placeholder="1199" className={inputClass(errors.original_price)} />
-            {errors.original_price && <p className="text-[11px] font-bold text-rose-500 mt-1.5">{errors.original_price}</p>}
-          </div>
-          <div>
-            <label className="block text-[13px] font-bold text-slate-700 mb-1.5">Discount (%)</label>
-            <input type="number" value={form.discount_percentage} onChange={(e) => set("discount_percentage", e.target.value)} placeholder="10" className={inputClass(errors.discount_percentage)} />
-            {errors.discount_percentage && <p className="text-[11px] font-bold text-rose-500 mt-1.5">{errors.discount_percentage}</p>}
-          </div>
-          <div>
-            <label className="block text-[13px] font-bold text-slate-700 mb-1.5">Final Price (Sale) ₹</label>
-            <div className="w-full px-4 py-3 text-sm font-bold border border-slate-200 bg-slate-100 text-slate-600 rounded-xl shadow-inner select-none">
-              {finalPrice > 0 ? `₹${finalPrice.toLocaleString("en-IN")}` : "-"}
-            </div>
-          </div>
-        </div>
-
-        {form.discount_percentage > 0 && finalPrice > 0 && (
-          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 text-emerald-800 px-4 py-2.5 rounded-xl text-sm font-bold">
-            <Tag className="w-4 h-4 text-emerald-500" />
-            {form.discount_percentage}% Discount Applied <span className="text-emerald-600 font-medium ml-1">(Customer saves ₹{Math.round((+form.original_price || 0) - finalPrice).toLocaleString("en-IN")})</span>
-          </div>
-        )}
 
         {/* ── Details ── */}
         <div>
@@ -579,15 +563,9 @@ const AdminProductForm = ({ mode = "add" }) => {
           <textarea value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="Brief product description..." rows={4} className={`${inputClass(false)} resize-none`} />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <div>
-            <label className="block text-[13px] font-bold text-slate-700 mb-1.5">Stock Quantity</label>
-            <input type="number" value={form.stock} onChange={(e) => set("stock", e.target.value)} placeholder="50" className={inputClass(false)} />
-          </div>
-          <div>
-            <label className="block text-[13px] font-bold text-slate-700 mb-1.5">Search Tags <span className="text-slate-400 font-medium text-[10px] uppercase tracking-wider ml-1">(Comma Separated)</span></label>
-            <input type="text" value={form.tags} onChange={(e) => set("tags", e.target.value)} placeholder="kadai, steel, cooking" className={inputClass(false)} />
-          </div>
+        <div>
+          <label className="block text-[13px] font-bold text-slate-700 mb-1.5">Search Tags <span className="text-slate-400 font-medium text-[10px] uppercase tracking-wider ml-1">(Comma Separated)</span></label>
+          <input type="text" value={form.tags} onChange={(e) => set("tags", e.target.value)} placeholder="kadai, steel, cooking" className={inputClass(false)} />
         </div>
 
         {/* ── Stock Toggle ── */}

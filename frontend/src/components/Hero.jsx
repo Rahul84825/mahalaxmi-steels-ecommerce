@@ -8,6 +8,7 @@ import { toast } from "react-toastify";
 import { DeliveryNotice } from "./DeliveryNotice";
 import { useCart } from "../context/CartContext";
 import { useProducts } from "../context/ProductContext";
+import { calculateFinalPrice } from "../utils/priceCalculator";
 
 const toNumber = (value, fallback = 0) => {
   const n = Number(value);
@@ -205,17 +206,32 @@ const Hero = memo(({ onCartOpen }) => {
   const { products } = useProducts();
   const heroProduct = products.find((p) => p?.isHero) || products[0] || null;
 
+  // NEW: Calculate pricing from variant-based structure
+  const getHeroProductPricing = (product) => {
+    if (!product) return { price: 0, originalPrice: 0, discount: 0 };
+    
+    const defaultVariant = (product.variants && product.variants[0]) || {};
+    const originalPrice = toNumber(defaultVariant.originalPrice ?? defaultVariant.price ?? product.originalPrice ?? product.mrp ?? product.price ?? 0, 0);
+    const discountPercent = toNumber(defaultVariant.discountPercent ?? 0, 0);
+    const price = originalPrice > 0 ? calculateFinalPrice(originalPrice, discountPercent) : 0;
+    const discount = discountPercent > 0 ? Math.round(discountPercent) : 0;
+    
+    return { price, originalPrice, discount };
+  };
+
+  const heroPricing = getHeroProductPricing(heroProduct);
+
   const safeHeroProduct = heroProduct
     ? {
         ...heroProduct,
         name: toText(heroProduct.name, "Featured Product"),
         image: toText(heroProduct.image || heroProduct.images?.[0], ""),
         category: toText(heroProduct.category, "Featured"),
-        price: toNumber(heroProduct.price, 0),
-        originalPrice: toNumber(heroProduct.originalPrice || heroProduct.mrp || heroProduct.price, 0),
+        price: heroPricing.price,
+        originalPrice: heroPricing.originalPrice,
         rating: toNumber(heroProduct.rating, 0),
         reviewCount: toNumber(heroProduct.reviewCount || heroProduct.reviews, 0),
-        discount: toNumber(heroProduct.discount, 0),
+        discount: heroPricing.discount,
         stock: toNumber(heroProduct.stock, 0),
         inStock:
           typeof heroProduct.inStock === "boolean"

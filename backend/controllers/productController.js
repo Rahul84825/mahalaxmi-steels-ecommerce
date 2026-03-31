@@ -2,6 +2,7 @@ const asyncHandler = require("express-async-handler");
 const Product      = require("../models/Product");
 const Category     = require("../models/Category");
 const mongoose     = require("mongoose");
+const { validateDiscountPercent } = require("../utils/priceCalculator");
 
 const normalizeCategoryToken = (value = "") =>
   String(value)
@@ -58,7 +59,10 @@ const normalizeVariantsInput = (rawVariants, { required = false } = {}) => {
   const normalized = rawVariants.map((variant, index) => {
     const id = String(variant?.id || variant?._id || createVariantId(index)).trim();
     const label = String(variant?.label || "").trim();
-    const price = Number(variant?.price);
+    
+    // NEW: Use originalPrice and discountPercent
+    const originalPrice = Number(variant?.originalPrice ?? variant?.price ?? variant?.mrp);
+    const discountPercent = Number(variant?.discountPercent ?? 0);
     const stock = Number(variant?.stock);
 
     if (!label) {
@@ -67,8 +71,14 @@ const normalizeVariantsInput = (rawVariants, { required = false } = {}) => {
       throw err;
     }
 
-    if (!Number.isFinite(price) || price <= 0) {
-      const err = new Error(`Variant #${index + 1}: price must be a positive number`);
+    if (!Number.isFinite(originalPrice) || originalPrice <= 0) {
+      const err = new Error(`Variant #${index + 1}: originalPrice must be a positive number`);
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (!Number.isFinite(discountPercent) || discountPercent < 0 || discountPercent > 90) {
+      const err = new Error(`Variant #${index + 1}: discountPercent must be between 0 and 90`);
       err.statusCode = 400;
       throw err;
     }
@@ -82,7 +92,8 @@ const normalizeVariantsInput = (rawVariants, { required = false } = {}) => {
     return {
       id,
       label,
-      price: Math.round(price),
+      originalPrice: Math.round(originalPrice),
+      discountPercent: Math.round(discountPercent * 100) / 100,  // Allow decimals
       stock: Math.floor(stock),
     };
   });
@@ -153,12 +164,12 @@ const getProductById = asyncHandler(async (req, res) => {
 
 // ── POST /api/products (admin) ────────────────────────────────────────────────
 const createProduct = asyncHandler(async (req, res) => {
-  const { name, description, category, category_id, price, originalPrice, inStock, specifications, isHero } = req.body;
+  const { name, description, category, category_id, inStock, specifications, isHero } = req.body;
   const resolvedCategoryId = category_id || category;
 
-  if (!name || !resolvedCategoryId || !price || !originalPrice) {
+  if (!name || !resolvedCategoryId) {
     res.status(400);
-    throw new Error("Please provide name, category_id, price and originalPrice");
+    throw new Error("Please provide name and category_id");
   }
 
   const exists = await Category.findById(resolvedCategoryId);
@@ -167,27 +178,26 @@ const createProduct = asyncHandler(async (req, res) => {
     throw new Error("Invalid category_id");
   }
 
+  // Variants are now required for pricing
+  const variants = normalizeVariantsInput(req.body.variants, { required: true });
   const images = normalizeImageArray(req.body.images, req.body.image);
   const primaryImage = images[0] || "";
-  const variants = normalizeVariantsInput(req.body.variants, { required: true });
   const derivedStock = variants.reduce((sum, variant) => sum + variant.stock, 0);
-  const derivedPrice = variants.reduce((min, variant) => Math.min(min, variant.price), variants[0].price);
+  const derivedInStock = derivedStock > 0;
 
   const product = await Product.create({
     name,
     description,
     category_id: resolvedCategoryId,
-    price: Math.round(Number.isFinite(+price) ? +price : derivedPrice), originalPrice: Math.round(+originalPrice),
-    mrp:    req.body.mrp !== undefined ? Math.round(+req.body.mrp) : Math.round(+originalPrice),
+    // NO LONGER setting product-level price fields
     image:  primaryImage,
     images,
-    inStock:  inStock  !== undefined ? !!inStock : derivedStock > 0,
+    inStock:  inStock !== undefined ? !!inStock : derivedInStock,
     brand:    req.body.brand || "",
-    stock:    req.body.stock !== undefined ? +req.body.stock : derivedStock,
     variants,
-    has_variants: variants.length > 0,
+    has_variants: true,  // Always true with new schema
     isHero:   !!isHero,
-    tags:     req.body.tags  || [],
+    tags:     req.body.tags || [],
     specifications,
   });
 
@@ -206,16 +216,11 @@ const updateProduct = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id);
   if (!product) { res.status(404); throw new Error("Product not found"); }
 
-  const fields = ["name","description","price","originalPrice","mrp",
-                  "image","images","inStock","brand","stock","tags","specifications","isHero"];
+  // Updated fields list: removed product-level price fields
+  const fields = ["name", "description", "image", "images", "inStock", "brand", "tags", "specifications", "isHero"];
   fields.forEach((f) => { 
     if (req.body[f] !== undefined) {
-      // Round price fields to ensure integer values
-      if (["price", "originalPrice", "mrp"].includes(f)) {
-        product[f] = Math.round(+req.body[f]);
-      } else {
-        product[f] = req.body[f];
-      }
+      product[f] = req.body[f];
     }
   });
 
@@ -241,13 +246,11 @@ const updateProduct = asyncHandler(async (req, res) => {
   if (req.body.variants !== undefined) {
     const normalizedVariants = normalizeVariantsInput(req.body.variants, { required: true });
     product.variants = normalizedVariants;
-    product.has_variants = normalizedVariants.length > 0;
+    product.has_variants = true;  // Always true now
 
     // Keep product stock in sync with variant stock totals when variants are provided.
     product.stock = normalizedVariants.reduce((sum, variant) => sum + variant.stock, 0);
-    if (product.stock <= 0) {
-      product.inStock = false;
-    }
+    product.inStock = product.stock > 0;
   }
 
   const updated = await product.save();

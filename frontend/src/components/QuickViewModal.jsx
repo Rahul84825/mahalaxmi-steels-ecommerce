@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useProducts } from "../context/ProductContext";
 import { getCategoryLabel } from "../utils/category";
+import { calculateFinalPrice } from "../utils/priceCalculator";
 
 const QuickViewModal = ({ product, onClose }) => {
   const navigate = useNavigate();
@@ -14,8 +15,13 @@ const QuickViewModal = ({ product, onClose }) => {
   const id = String(product._id || product.id);
   const isWishlisted = wishlist.includes(id);
   const categoryLabel = getCategoryLabel(product.category, categories);
-  const mrp = product.mrp || product.originalPrice || 0;
-  const discount = mrp > product.price ? Math.round(((mrp - product.price) / mrp) * 100) : 0;
+  
+  // NEW: Use variant-based pricing from first/default variant
+  const defaultVariant = (product.variants && product.variants[0]) || {};
+  const originalPrice = Number(defaultVariant.originalPrice ?? defaultVariant.price ?? product.originalPrice ?? product.mrp ?? 0);
+  const discountPercent = Number(defaultVariant.discountPercent ?? 0);
+  const finalPrice = originalPrice > 0 ? calculateFinalPrice(originalPrice, discountPercent) : 0;
+  
   const hasRating = (product.rating || 0) > 0;
 
   const imageSrc = product.image && product.image.startsWith("http") ? product.image : null;
@@ -67,13 +73,13 @@ const QuickViewModal = ({ product, onClose }) => {
           )}
 
           <div className="flex items-end gap-2 mb-6 mt-auto">
-            <span className="text-3xl font-black text-slate-900">₹{product.price.toLocaleString("en-IN")}</span>
-            {mrp > product.price && (
-              <span className="text-sm text-slate-400 line-through pb-1">₹{mrp.toLocaleString("en-IN")}</span>
+            <span className="text-3xl font-black text-slate-900">₹{finalPrice.toLocaleString("en-IN")}</span>
+            {originalPrice > finalPrice && (
+              <span className="text-sm text-slate-400 line-through pb-1">₹{originalPrice.toLocaleString("en-IN")}</span>
             )}
-            {discount > 0 && (
+            {discountPercent > 0 && (
               <span className="ml-auto text-xs font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 px-2.5 py-1">
-                {discount}% OFF
+                {Math.round(discountPercent)}% OFF
               </span>
             )}
           </div>
