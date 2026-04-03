@@ -1,4 +1,4 @@
-import { useState, useCallback, memo } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import {
   Search, ShoppingCart, ArrowRight, Star, BadgeCheck,
   FileText, Store, CheckCircle2, ShoppingBag,
@@ -9,6 +9,15 @@ import { DeliveryNotice } from "./DeliveryNotice";
 import { useCart } from "../context/CartContext";
 import { useProducts } from "../context/ProductContext";
 import { calculateFinalPrice, formatPrice } from "../utils/priceCalculator";
+
+const HERO_BACKGROUND_IMAGES = [
+  "/hero/hero-slide-1.svg",
+  "/hero/hero-slide-2.svg",
+  "/hero/hero-slide-3.svg",
+  "/hero/hero-slide-4.svg",
+];
+
+const HERO_SLIDE_INTERVAL_MS = 4000;
 
 const toNumber = (value, fallback = 0) => {
   const n = Number(value);
@@ -218,9 +227,20 @@ ProductCard.displayName = "ProductCard";
 // ── Main Hero Component ──────────────────────────────────────────────
 const Hero = memo(({ onCartOpen }) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeBackgroundIndex, setActiveBackgroundIndex] = useState(0);
   const navigate = useNavigate();
   const { products, loading } = useProducts();
   const heroProduct = products.find((p) => p?.isHero) || products[0] || null;
+
+  useEffect(() => {
+    if (HERO_BACKGROUND_IMAGES.length <= 1) return undefined;
+
+    const timer = setInterval(() => {
+      setActiveBackgroundIndex((prev) => (prev + 1) % HERO_BACKGROUND_IMAGES.length);
+    }, HERO_SLIDE_INTERVAL_MS);
+
+    return () => clearInterval(timer);
+  }, []);
 
   // NEW: Calculate pricing from variant-based structure
   const getHeroProductPricing = (product) => {
@@ -266,14 +286,46 @@ const Hero = memo(({ onCartOpen }) => {
   );
 
   return (
-    <section className="relative bg-slate-50 overflow-hidden section-shell pt-8 sm:pt-12 md:pt-16">
+    <section className="relative bg-slate-900 overflow-hidden section-shell pt-8 sm:pt-12 md:pt-16">
+      {/* ── Background Image Slider ── */}
+      <div className="absolute inset-0 pointer-events-none z-0">
+        {HERO_BACKGROUND_IMAGES.map((imageUrl, index) => (
+          <div
+            key={imageUrl}
+            className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-1000 ease-in-out ${
+              index === activeBackgroundIndex ? "opacity-100" : "opacity-0"
+            }`}
+            style={{ backgroundImage: `url(${imageUrl})` }}
+            aria-hidden="true"
+          />
+        ))}
+      </div>
+
+      {/* ── Dark Overlay for Text Contrast ── */}
+      <div className="absolute inset-0 bg-slate-950/60 pointer-events-none z-10" aria-hidden="true" />
+
       {/* ── Ambient Background Glows ── */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-20">
         <div className="absolute -top-[20%] -right-[10%] w-[50%] h-[50%] bg-blue-400/20 rounded-full mix-blend-multiply filter blur-[120px]" />
         <div className="absolute -bottom-[20%] -left-[10%] w-[50%] h-[50%] bg-blue-300/20 rounded-full mix-blend-multiply filter blur-[120px]" />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* ── Optional Slider Dots ── */}
+      <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
+        {HERO_BACKGROUND_IMAGES.map((_, index) => (
+          <button
+            key={`hero-dot-${index}`}
+            type="button"
+            onClick={() => setActiveBackgroundIndex(index)}
+            className={`h-2.5 rounded-full transition-all ${
+              index === activeBackgroundIndex ? "w-6 bg-white" : "w-2.5 bg-white/50 hover:bg-white/80"
+            }`}
+            aria-label={`Go to hero background slide ${index + 1}`}
+          />
+        ))}
+      </div>
+
+      <div className="relative z-30 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-8 sm:gap-12 lg:gap-8 items-center">
 
           {/* ── Left Content ── */}
