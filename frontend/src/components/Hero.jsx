@@ -9,8 +9,9 @@ import { DeliveryNotice } from "./DeliveryNotice";
 import { useCart } from "../context/CartContext";
 import { useProducts } from "../context/ProductContext";
 import { calculateFinalPrice, formatPrice } from "../utils/priceCalculator";
+import { api } from "../utils/api";
 
-const HERO_BACKGROUND_IMAGES = [
+const FALLBACK_HERO_BACKGROUND_IMAGES = [
   "/hero/hero-slide-1.svg",
   "/hero/hero-slide-2.svg",
   "/hero/hero-slide-3.svg",
@@ -228,19 +229,45 @@ ProductCard.displayName = "ProductCard";
 const Hero = memo(({ onCartOpen }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeBackgroundIndex, setActiveBackgroundIndex] = useState(0);
+  const [heroBackgroundImages, setHeroBackgroundImages] = useState([]);
   const navigate = useNavigate();
   const { products, loading } = useProducts();
   const heroProduct = products.find((p) => p?.isHero) || products[0] || null;
 
+  const resolvedBackgroundImages =
+    heroBackgroundImages.length > 0 ? heroBackgroundImages : FALLBACK_HERO_BACKGROUND_IMAGES;
+
   useEffect(() => {
-    if (HERO_BACKGROUND_IMAGES.length <= 1) return undefined;
+    const loadHeroImages = async () => {
+      try {
+        const data = await api.get("/api/hero");
+        const dynamicImages = Array.isArray(data.images)
+          ? data.images.map((item) => item?.url).filter(Boolean)
+          : [];
+
+        setHeroBackgroundImages(dynamicImages);
+      } catch (error) {
+        console.error("[Hero] Failed to load dynamic hero images", error);
+      }
+    };
+
+    loadHeroImages();
+  }, []);
+
+  useEffect(() => {
+    if (activeBackgroundIndex < resolvedBackgroundImages.length) return;
+    setActiveBackgroundIndex(0);
+  }, [activeBackgroundIndex, resolvedBackgroundImages.length]);
+
+  useEffect(() => {
+    if (resolvedBackgroundImages.length <= 1) return undefined;
 
     const timer = setInterval(() => {
-      setActiveBackgroundIndex((prev) => (prev + 1) % HERO_BACKGROUND_IMAGES.length);
+      setActiveBackgroundIndex((prev) => (prev + 1) % resolvedBackgroundImages.length);
     }, HERO_SLIDE_INTERVAL_MS);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [resolvedBackgroundImages.length]);
 
   // NEW: Calculate pricing from variant-based structure
   const getHeroProductPricing = (product) => {
@@ -289,9 +316,9 @@ const Hero = memo(({ onCartOpen }) => {
     <section className="relative bg-slate-900 overflow-hidden section-shell pt-8 sm:pt-12 md:pt-16">
       {/* ── Background Image Slider ── */}
       <div className="absolute inset-0 pointer-events-none z-0">
-        {HERO_BACKGROUND_IMAGES.map((imageUrl, index) => (
+        {resolvedBackgroundImages.map((imageUrl, index) => (
           <div
-            key={imageUrl}
+            key={`${imageUrl}-${index}`}
             className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-1000 ease-in-out ${
               index === activeBackgroundIndex ? "opacity-100" : "opacity-0"
             }`}
@@ -312,7 +339,7 @@ const Hero = memo(({ onCartOpen }) => {
 
       {/* ── Optional Slider Dots ── */}
       <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
-        {HERO_BACKGROUND_IMAGES.map((_, index) => (
+        {resolvedBackgroundImages.map((_, index) => (
           <button
             key={`hero-dot-${index}`}
             type="button"

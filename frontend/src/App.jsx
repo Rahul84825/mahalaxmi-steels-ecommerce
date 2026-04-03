@@ -37,6 +37,7 @@ const AdminOffers      = lazy(() => import("./admin/AdminOffers"));
 const AdminOrders      = lazy(() => import("./admin/AdminOrders"));
 const AdminCategories  = lazy(() => import("./admin/AdminCategories"));
 const AdminBrands      = lazy(() => import("./admin/AdminBrands"));
+const AdminHeroBannerManager = lazy(() => import("./admin/AdminHeroBannerManager"));
 
 // Contexts
 import { useAuth } from "./context/AuthContext";
@@ -121,6 +122,7 @@ const App = () => {
             <Route path="categories"            element={<AdminCategories />} />
             <Route path="brands"                element={<AdminBrands />} />
             <Route path="offers"                element={<AdminOffers />} />
+            <Route path="hero-banners"          element={<AdminHeroBannerManager />} />
           </Route>
 
           {/* ── Storefront ── */}
