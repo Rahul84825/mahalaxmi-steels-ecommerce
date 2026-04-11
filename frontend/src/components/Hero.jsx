@@ -1,8 +1,5 @@
 import { useState, useEffect, useCallback, memo } from "react";
-import {
-  Search, ShoppingCart, ArrowRight, Star, BadgeCheck,
-  FileText, Store, CheckCircle2, ShoppingBag,
-} from "lucide-react";
+import { ShoppingCart, Star, CheckCircle2, ShoppingBag } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { DeliveryNotice } from "./DeliveryNotice";
@@ -102,12 +99,12 @@ export const ProductCard = memo(({ product, onCartOpen }) => {
   return (
     <div
       onClick={handleCardClick}
-      className="relative bg-white p-4 sm:p-5 rounded-3xl sm:rounded-4xl shadow-xl sm:shadow-2xl shadow-slate-200/80 border border-slate-100
+      className="relative bg-white p-3.5 sm:p-4.5 rounded-3xl sm:rounded-4xl shadow-xl sm:shadow-2xl shadow-slate-200/80 border border-slate-100
                  hover:-translate-y-3 hover:shadow-2xl hover:shadow-blue-100/60 hover:border-blue-100
                  transition-all duration-300 w-full max-w-85 sm:max-w-100 flex flex-col group cursor-pointer"
     >
       {/* Image Area */}
-      <div className="relative bg-slate-50 overflow-hidden aspect-square rounded-[1.25rem] sm:rounded-3xl w-full shrink-0 flex items-center justify-center mb-4 sm:mb-5">
+      <div className="relative bg-slate-50 overflow-hidden aspect-square rounded-[1.25rem] sm:rounded-3xl w-full shrink-0 flex items-center justify-center mb-3 sm:mb-4">
         {product.image ? (
           <img
             src={product.image}
@@ -227,10 +224,8 @@ ProductCard.displayName = "ProductCard";
 
 // ── Main Hero Component ──────────────────────────────────────────────
 const Hero = memo(({ onCartOpen }) => {
-  const [searchQuery, setSearchQuery] = useState("");
   const [activeBackgroundIndex, setActiveBackgroundIndex] = useState(0);
   const [heroBackgroundImages, setHeroBackgroundImages] = useState([]);
-  const navigate = useNavigate();
   const { products, loading } = useProducts();
   const heroProduct = products.find((p) => p?.isHero) || products[0] || null;
 
@@ -267,16 +262,18 @@ const Hero = memo(({ onCartOpen }) => {
     return () => clearInterval(timer);
   }, [resolvedBackgroundImages.length]);
 
-  // NEW: Calculate pricing from variant-based structure
   const getHeroProductPricing = (product) => {
     if (!product) return { price: 0, originalPrice: 0, discount: 0 };
-    
+
     const defaultVariant = (product.variants && product.variants[0]) || {};
-    const originalPrice = toNumber(defaultVariant.originalPrice ?? defaultVariant.price ?? product.originalPrice ?? product.mrp ?? product.price ?? 0, 0);
+    const originalPrice = toNumber(
+      defaultVariant.originalPrice ?? defaultVariant.price ?? product.originalPrice ?? product.mrp ?? product.price ?? 0,
+      0
+    );
     const discountPercent = toNumber(defaultVariant.discountPercent ?? 0, 0);
     const price = originalPrice > 0 ? calculateFinalPrice(originalPrice, discountPercent) : 0;
     const discount = discountPercent > 0 ? Math.round(discountPercent) : 0;
-    
+
     return { price, originalPrice, discount };
   };
 
@@ -301,18 +298,8 @@ const Hero = memo(({ onCartOpen }) => {
       }
     : null;
 
-  const handleSearch = useCallback(
-    (e) => {
-      e.preventDefault();
-      if (!(searchQuery || "").trim()) return;
-      navigate(`/products?search=${encodeURIComponent((searchQuery || "").trim())}`);
-    },
-    [searchQuery, navigate]
-  );
-
   return (
-    <section className="relative bg-slate-900 overflow-hidden section-shell pt-8 sm:pt-12 md:pt-16">
-      {/* ── Background Image Slider ── */}
+    <section className="relative overflow-hidden bg-slate-900 pt-6 pb-10 sm:pt-8 sm:pb-14">
       <div className="absolute inset-0 pointer-events-none z-0">
         {resolvedBackgroundImages.map((imageUrl, index) => (
           <div
@@ -326,11 +313,9 @@ const Hero = memo(({ onCartOpen }) => {
         ))}
       </div>
 
-      {/* ── Dark Overlay for Text Contrast ── */}
       <div className="absolute inset-0 bg-slate-950/60 pointer-events-none z-10" aria-hidden="true" />
 
-      {/* ── Optional Slider Dots ── */}
-      <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
+      <div className="absolute bottom-4 sm:bottom-5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
         {resolvedBackgroundImages.map((_, index) => (
           <button
             key={`hero-dot-${index}`}
@@ -344,89 +329,42 @@ const Hero = memo(({ onCartOpen }) => {
         ))}
       </div>
 
-      <div className="relative z-30 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-8 sm:gap-12 lg:gap-8 items-center">
-
-          {/* ── Left Content ── */}
-          <div className="text-center lg:text-left flex flex-col items-center lg:items-start">
-
-            <div className="inline-flex items-center gap-2 bg-white/15 border border-white/30 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-bold mb-6 sm:mb-8 shadow-sm backdrop-blur-sm">
-              <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-amber-400 text-amber-400" />
-              <span>Trusted by 10,000+ Happy Homes</span>
-            </div>
-
-            <h1 className="text-[var(--text-display)] font-extrabold text-white mb-4 sm:mb-6 leading-[1.1] tracking-tight">
-              Premium Quality <br className="hidden sm:block" />
-              <span className="text-blue-200 bg-clip-text">Kitchen & Pooja Essentials</span>
-            </h1>
-
-            <p className="section-subtitle text-base sm:text-lg mb-8 sm:mb-10 max-w-xl px-2 sm:px-0 text-slate-100/90">
-              Discover our finest collection of durable stainless steel utensils,
-              traditional copper idols, and reliable home appliances. Quality crafted for your everyday life.
-            </p>
-
-            {/* ── Integrated Search Form ── */}
-            <form
-              onSubmit={handleSearch}
-              className="w-full max-w-lg mb-8 sm:mb-10 px-1 sm:px-0"
-            >
-              <div className="relative flex items-center bg-white rounded-full shadow-lg shadow-slate-200/50 border border-slate-100 p-1 sm:p-1.5 focus-within:ring-4 focus-within:ring-blue-100 focus-within:border-blue-300 transition-all duration-200">
-                <Search className="absolute left-3.5 sm:left-5 text-slate-400 w-4 h-4 sm:w-5 sm:h-5" />
-                <input
-                  type="text"
-                  placeholder="Search utensils, copper items..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-transparent pl-10 sm:pl-14 pr-2 sm:pr-4 py-2.5 sm:py-3 text-sm sm:text-base text-slate-700 font-medium outline-none placeholder:text-slate-400"
-                />
-                <button
-                  type="submit"
-                  className="btn-primary px-4 sm:px-8 py-2.5 sm:py-3.5 text-sm shrink-0"
-                >
-                  Search
-                </button>
+      <div className="relative z-30 mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr] items-center gap-7 sm:gap-8 lg:gap-12 min-h-[360px] sm:min-h-[430px] py-4 sm:py-6">
+          <div className="flex items-center justify-center lg:justify-start">
+            <div className="w-full max-w-md text-center lg:text-left">
+              <div className="mb-5 sm:mb-6">
+                <p className="text-[10px] sm:text-xs uppercase tracking-[0.35em] text-orange-300 font-bold mb-4">
+                  Trusted Quality For Every Home
+                </p>
+                <h1 className="font-extrabold leading-[1.05] text-white text-[clamp(2.2rem,4vw,3.8rem)]">
+                  Steel & Home
+                  <br />
+                  <span className="text-orange-300">Appliances</span>
+                </h1>
+                <p className="mt-4 sm:mt-5 mx-auto lg:mx-0 max-w-sm text-sm sm:text-base leading-7 text-slate-100/80">
+                  Premium steelware, kitchen essentials, and reliable home appliances for everyday use.
+                </p>
+                <div className="mt-5 sm:mt-6 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start">
+                  <NavLink
+                    to="/products"
+                    className="btn-primary inline-flex items-center justify-center gap-2 px-6 py-3 text-sm"
+                  >
+                    Shop Now
+                  </NavLink>
+                  <NavLink
+                    to="/products"
+                    className="btn-secondary inline-flex items-center justify-center px-6 py-3 text-sm border-white/20 bg-white/10 text-white hover:bg-white/15 hover:text-white"
+                  >
+                    View Catalog
+                  </NavLink>
+                </div>
               </div>
-            </form>
-
-            {/* ── Action Buttons ── */}
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto justify-center lg:justify-start mb-10 sm:mb-12 px-1 sm:px-0">
-              <NavLink
-                to="/products"
-                className="btn-primary px-6 sm:px-8 py-3.5 sm:py-4 text-sm sm:text-base flex items-center justify-center gap-2 group"
-              >
-                Shop Now
-                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
-              </NavLink>
-              <NavLink
-                to="/products"
-                className="btn-secondary px-6 sm:px-8 py-3.5 sm:py-4 text-sm sm:text-base flex items-center justify-center"
-              >
-                View Catalog
-              </NavLink>
-            </div>
-
-            {/* ── Delivery Notice ── */}
-            <DeliveryNotice className="w-full mb-8 sm:mb-10" />
-
-            {/* ── Trust Features ── */}
-            <div className="flex flex-wrap justify-center lg:justify-start gap-x-5 sm:gap-x-8 gap-y-3 sm:gap-y-4 pt-5 sm:pt-6 border-t border-white/30 w-full">
-              <div className="flex items-center gap-2">
-                <BadgeCheck className="w-4 h-4 sm:w-5 sm:h-5 text-blue-200" />
-                <span className="text-xs sm:text-sm font-bold text-white">Authentic Products</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-blue-200" />
-                <span className="text-xs sm:text-sm font-bold text-white">GST Billing Available</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Store className="w-4 h-4 sm:w-5 sm:h-5 text-blue-200" />
-                <span className="text-xs sm:text-sm font-bold text-white">Store Pickup Available</span>
-              </div>
+              <DeliveryNotice className="w-full mt-1 sm:mt-2" />
             </div>
           </div>
 
-          {/* ── Right Content (Hero Product Card) ── */}
-          <div className="relative lg:mt-0 flex justify-center items-center px-2 sm:px-4 lg:px-0">
+          <div className="relative flex justify-center items-center px-2 sm:px-4 lg:px-0 lg:pl-4 xl:pl-8">
             {loading ? (
               <div className="relative bg-white p-8 rounded-3xl shadow-xl border border-slate-200 w-full max-w-85 sm:max-w-100 text-center animate-pulse">
                 <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100" />
@@ -445,7 +383,6 @@ const Hero = memo(({ onCartOpen }) => {
               </div>
             )}
           </div>
-
         </div>
       </div>
     </section>
