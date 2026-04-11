@@ -9,7 +9,7 @@ import { DeliveryNotice } from "./DeliveryNotice";
 import { useCart } from "../context/CartContext";
 import { useProducts } from "../context/ProductContext";
 import { calculateFinalPrice, formatPrice } from "../utils/priceCalculator";
-import { api } from "../utils/api";
+import { getHeroSlides } from "../services/heroSlides";
 
 const FALLBACK_HERO_BACKGROUND_IMAGES = [
   "/hero/hero-slide-1.svg",
@@ -240,10 +240,8 @@ const Hero = memo(({ onCartOpen }) => {
   useEffect(() => {
     const loadHeroImages = async () => {
       try {
-        const data = await api.get("/api/hero");
-        const dynamicImages = Array.isArray(data.images)
-          ? data.images.map((item) => item?.url).filter(Boolean)
-          : [];
+        const slides = await getHeroSlides();
+        const dynamicImages = slides.map((slide) => slide.image).filter(Boolean);
 
         setHeroBackgroundImages(dynamicImages);
       } catch (error) {
@@ -331,12 +329,6 @@ const Hero = memo(({ onCartOpen }) => {
       {/* ── Dark Overlay for Text Contrast ── */}
       <div className="absolute inset-0 bg-slate-950/60 pointer-events-none z-10" aria-hidden="true" />
 
-      {/* ── Ambient Background Glows ── */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none z-20">
-        <div className="absolute -top-[20%] -right-[10%] w-[50%] h-[50%] bg-blue-400/20 rounded-full mix-blend-multiply filter blur-[120px]" />
-        <div className="absolute -bottom-[20%] -left-[10%] w-[50%] h-[50%] bg-blue-300/20 rounded-full mix-blend-multiply filter blur-[120px]" />
-      </div>
-
       {/* ── Optional Slider Dots ── */}
       <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
         {resolvedBackgroundImages.map((_, index) => (
@@ -358,17 +350,17 @@ const Hero = memo(({ onCartOpen }) => {
           {/* ── Left Content ── */}
           <div className="text-center lg:text-left flex flex-col items-center lg:items-start">
 
-            <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 text-blue-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-bold mb-6 sm:mb-8 shadow-sm">
+            <div className="inline-flex items-center gap-2 bg-white/15 border border-white/30 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-bold mb-6 sm:mb-8 shadow-sm backdrop-blur-sm">
               <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-amber-400 text-amber-400" />
               <span>Trusted by 10,000+ Happy Homes</span>
             </div>
 
-            <h1 className="text-[var(--text-display)] font-extrabold text-slate-900 mb-4 sm:mb-6 leading-[1.1] tracking-tight">
+            <h1 className="text-[var(--text-display)] font-extrabold text-white mb-4 sm:mb-6 leading-[1.1] tracking-tight">
               Premium Quality <br className="hidden sm:block" />
-              <span className="text-blue-600 bg-clip-text">Kitchen & Pooja Essentials</span>
+              <span className="text-blue-200 bg-clip-text">Kitchen & Pooja Essentials</span>
             </h1>
 
-            <p className="section-subtitle text-base sm:text-lg mb-8 sm:mb-10 max-w-xl px-2 sm:px-0">
+            <p className="section-subtitle text-base sm:text-lg mb-8 sm:mb-10 max-w-xl px-2 sm:px-0 text-slate-100/90">
               Discover our finest collection of durable stainless steel utensils,
               traditional copper idols, and reliable home appliances. Quality crafted for your everyday life.
             </p>
@@ -417,27 +409,24 @@ const Hero = memo(({ onCartOpen }) => {
             <DeliveryNotice className="w-full mb-8 sm:mb-10" />
 
             {/* ── Trust Features ── */}
-            <div className="flex flex-wrap justify-center lg:justify-start gap-x-5 sm:gap-x-8 gap-y-3 sm:gap-y-4 pt-5 sm:pt-6 border-t border-slate-200/60 w-full">
+            <div className="flex flex-wrap justify-center lg:justify-start gap-x-5 sm:gap-x-8 gap-y-3 sm:gap-y-4 pt-5 sm:pt-6 border-t border-white/30 w-full">
               <div className="flex items-center gap-2">
-                <BadgeCheck className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
-                <span className="text-xs sm:text-sm font-bold text-slate-700">Authentic Products</span>
+                <BadgeCheck className="w-4 h-4 sm:w-5 sm:h-5 text-blue-200" />
+                <span className="text-xs sm:text-sm font-bold text-white">Authentic Products</span>
               </div>
               <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
-                <span className="text-xs sm:text-sm font-bold text-slate-700">GST Billing Available</span>
+                <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-blue-200" />
+                <span className="text-xs sm:text-sm font-bold text-white">GST Billing Available</span>
               </div>
               <div className="flex items-center gap-2">
-                <Store className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
-                <span className="text-xs sm:text-sm font-bold text-slate-700">Store Pickup Available</span>
+                <Store className="w-4 h-4 sm:w-5 sm:h-5 text-blue-200" />
+                <span className="text-xs sm:text-sm font-bold text-white">Store Pickup Available</span>
               </div>
             </div>
           </div>
 
           {/* ── Right Content (Hero Product Card) ── */}
           <div className="relative lg:mt-0 flex justify-center items-center px-2 sm:px-4 lg:px-0">
-            {/* Soft backdrop blur */}
-            <div className="absolute inset-0 bg-linear-to-tr from-blue-100/50 to-transparent rounded-full blur-3xl scale-90 pointer-events-none" />
-
             {loading ? (
               <div className="relative bg-white p-8 rounded-3xl shadow-xl border border-slate-200 w-full max-w-85 sm:max-w-100 text-center animate-pulse">
                 <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100" />

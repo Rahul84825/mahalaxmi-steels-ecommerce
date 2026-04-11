@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ImagePlus, Trash2, UploadCloud, AlertCircle, CheckCircle2, XCircle } from "lucide-react";
-import { api } from "../utils/api";
+import { deleteHeroSlide, getHeroSlides, uploadHeroSlides } from "../services/heroSlides";
 
 const MAX_PREVIEW_COUNT = 10;
 
@@ -32,8 +32,8 @@ const AdminHeroBannerManager = () => {
   const fetchHeroImages = async () => {
     try {
       setLoading(true);
-      const data = await api.get("/api/hero");
-      setImages(Array.isArray(data.images) ? data.images : []);
+      const slides = await getHeroSlides();
+      setImages(slides);
     } catch (error) {
       setStatus({ type: "error", message: error.message || "Failed to load hero images" });
     } finally {
@@ -68,8 +68,8 @@ const AdminHeroBannerManager = () => {
 
     try {
       setUploading(true);
-      const data = await api.upload("/api/hero/add", formData, token);
-      setImages(Array.isArray(data.images) ? data.images : []);
+      const slides = await uploadHeroSlides(formData, token);
+      setImages(slides);
       setSelectedFiles([]);
       setStatus({ type: "success", message: "Hero images uploaded successfully." });
     } catch (error) {
@@ -82,8 +82,8 @@ const AdminHeroBannerManager = () => {
   const handleDelete = async (imageId) => {
     try {
       setDeletingId(imageId);
-      const data = await api.delete(`/api/hero/${imageId}`, token);
-      setImages(Array.isArray(data.images) ? data.images : []);
+      const slides = await deleteHeroSlide(imageId, token);
+      setImages(slides);
       setStatus({ type: "success", message: "Hero image deleted." });
     } catch (error) {
       setStatus({ type: "error", message: error.message || "Failed to delete image" });
@@ -191,7 +191,7 @@ const AdminHeroBannerManager = () => {
               const imageId = image._id || image.id;
               return (
                 <div key={imageId} className="rounded-2xl border border-slate-200 overflow-hidden bg-slate-50">
-                  <img src={image.url} alt="Hero banner" className="w-full h-44 object-cover" />
+                  <img src={image.image} alt="Hero banner" className="w-full h-44 object-cover" />
                   <div className="p-3 flex items-center justify-end">
                     <button
                       type="button"
